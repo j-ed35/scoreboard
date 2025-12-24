@@ -1,0 +1,6103 @@
+openapi: 3.0.1
+servers:
+  - url: https://api.nba.com/v0
+    description: NBA Stats API
+info:
+  title: Schedule
+  version: v0
+  description: >
+    There are four schedule-related endpoints for fetching data about league
+    games. The primary goal of these endpoints is to provide a calendar-like
+    overview of games, grouped by day.
+
+
+    Schedules include the following information:
+
+    * Game time
+
+    * Arena
+
+    * National and local broadcasters
+
+    * Home and away team information (including record)
+
+    * Game points leader (if game has already been played)
+  x-metadata:
+    tags:
+      - Public
+    image: ../../images/schedule.svg
+    description: >-
+      Schedules of every league game across every team. Season calendars and
+      associated metadata.
+    apiId: d17010a4-f5e2-4986-b010-a4f5e21986e0
+paths:
+  /api/schedule/full:
+    get:
+      summary: Full Schedule
+      description: >-
+        A schedule of every league game grouped by day filterable by season and
+        team ID(s). This endpoint returns an array of gameDates, each with a
+        nested array of games.
+      operationId: getFullSchedule
+      parameters:
+        - $ref: '#/components/parameters/leagueId'
+        - name: season
+          in: query
+          description: >-
+            Single season year. YYYY-YY (NBA, G-League) or YYYY (WNBA, Summer
+            Leagues) format
+          schema:
+            type: string
+            description: >-
+              Single season year. YYYY-YY (NBA, G-League) or YYYY (WNBA, Summer
+              Leagues) format
+            nullable: true
+            example: 2022-23
+        - name: teamId
+          in: query
+          description: Team ID
+          schema:
+            type: string
+            description: Team ID
+            nullable: true
+            example: 1610612741
+        - name: vsTeamId
+          in: query
+          description: Opponent Team ID
+          schema:
+            type: string
+            description: Opponent Team ID
+            nullable: true
+            example: 1610612757
+        - name: regiodId
+          in: query
+          description: >-
+            Region ID - See Schedule API Guide in Get Started Tab for Full List
+            of Region IDs
+          schema:
+            type: integer
+            description: Region ID
+            nullable: true
+            example: 1
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleFullDataModel'
+  /api/schedule/rolling:
+    get:
+      summary: Rolling Schedule
+      operationId: getRollingSchedule
+      description: >-
+        Get league schedule around a specified date (5 days before to 5 days
+        after). The format of the data is the same as the schedule/full
+        endpoint.  
+      parameters:
+        - $ref: '#/components/parameters/leagueId'
+        - name: gameDate
+          in: query
+          description: Single game date. Use TODAY or empty for today's date
+          schema:
+            type: string
+            description: Single game date. Use TODAY or empty for today's date
+            nullable: true
+            example: '2022-02-25'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleRollingDataModel'
+  /api/schedule/gamesbyday:
+    get:
+      summary: Games By Day
+      operationId: getGamesByDay
+      description: >-
+        Every league game for specified season or seasons. This returns an
+        object gamesByDay which has a dates property, which itself has a teams
+        array listing every team that played on a given date.  
+      parameters:
+        - $ref: '#/components/parameters/leagueId'
+        - name: season
+          in: query
+          description: >-
+            Single season year. YYYY-YY (NBA, G-League) or YYYY (WNBA, Summer
+            Leagues) format
+          schema:
+            type: string
+            description: >-
+              Single season year. YYYY-YY (NBA, G-League) or YYYY (WNBA, Summer
+              Leagues) format
+            nullable: true
+            example: 2022-23
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GamesByDayDataModel'
+  /api/schedule/seasoncalendar:
+    get:
+      summary: Season Calendar
+      operationId: getSeasonCalendar
+      description: >-
+        Metadata associated with a given game date, including which season the
+        provided date(s) are associated with.  
+      parameters:
+        - $ref: '#/components/parameters/leagueId'
+        - name: gameDate
+          in: query
+          description: Single game date. Use TODAY or empty for today's date
+          schema:
+            type: string
+            description: Single game date. Use TODAY or empty for today's date
+            nullable: true
+            example: '2022-03-22'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeasonCalendarDataModel'
+  /api/schedule/broadcasters:
+    get:
+      summary: Schedule Broadcasters
+      operationId: getScheduleBroadcasters
+      parameters:
+        - $ref: '#/components/parameters/leagueId'
+        - name: season
+          in: query
+          description: >-
+            A Season Year: YYYY-YY (NBA, G-League) or YYYY (WNBA) format or 'All
+            Time'
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleBroadcastersDataModel'
+security:
+  - ApiKeyAuth: []
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-NBA-Api-Key
+  parameters:
+    leagueId:
+      name: leagueId
+      in: query
+      description: >-
+        Two digit league ID. <br>*Note: Summer League IDs are supported and can
+        be found in the Get Started Tab*
+      required: true
+      schema:
+        type: string
+        description: >-
+          Two digit league ID. <br>*Note: Summer League IDs are supported and
+          can be found in the Get Started Tab*
+        x-enumDescriptions:
+          '10': WNBA
+          '20': G League
+          '00': NBA
+        example: '00'
+    measureType:
+      name: measureType
+      in: query
+      description: Measure type
+      schema:
+        type: string
+        description: Measure type
+        enum:
+          - Base
+          - Advanced
+          - Misc
+          - Four Factors
+          - Scoring
+          - Opponent
+          - Usage
+          - Defense
+        nullable: true
+    seasonType:
+      name: seasonType
+      in: query
+      description: Season Type
+      required: true
+      schema:
+        type: string
+        description: Season Type
+        enum:
+          - Regular Season
+          - Pre Season
+          - Preseason
+          - Playoffs
+          - All-Star
+          - PlayIn
+          - IST Championship
+    stat:
+      name: stat
+      in: query
+      description: Stat for the leaderboard
+      required: true
+      schema:
+        type: string
+        description: Stat for the leaderboard
+        enum:
+          - ast
+          - blk
+          - fantasypts
+          - f3m
+          - fg3pct
+          - fgpct
+          - ftm
+          - pts
+          - reb
+          - stl
+          - tov
+        x-enumDescriptions:
+          ast: Assist Leaders
+          blk: Block Leaders
+          fantasypts: Fantasy Points Leaders
+          f3m: 3pt Made Leaders
+          fg3pct: 3pt% Leaders
+          fgpct: Field Goal % Leaders
+          ftm: Free Throw Leaders
+          pts: Scoring Leaders
+          reb: Rebound Leaders
+          stl: Steals Leaders
+          tov: Turnover Leaders
+  schemas:
+    ScheduleFullMeta:
+      type: object
+      properties:
+        version:
+          type: integer
+          format: int32
+        request:
+          type: string
+          nullable: true
+        time:
+          type: string
+          format: date-time
+      additionalProperties: false
+    ScheduleFullBroadcaster:
+      type: object
+      properties:
+        broadcasterScope:
+          type: string
+          description: Away team's broadcaster = 'away', Home = 'home', National = 'natl'
+          nullable: true
+        broadcasterMedia:
+          type: string
+          description: TV = 'tv', Radio = 'radio'
+          nullable: true
+        broadcasterId:
+          type: integer
+          format: int32
+        broadcasterDisplay:
+          type: string
+          nullable: true
+        broadcasterAbbreviation:
+          type: string
+          nullable: true
+        tapeDelayComments:
+          type: string
+          nullable: true
+        broadcasterVideoLink:
+          type: string
+          nullable: true
+        broadcasterTeamId:
+          type: integer
+          description: Team ID of affiliated broadcaster. -1 for non-affliated broadcaster
+          nullable: true
+        broadcasterRanking:
+          type: integer
+          nullable: true
+      additionalProperties: false
+    ScheduleFullBroadcasters:
+      type: object
+      properties:
+        nationalBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleFullBroadcaster'
+          nullable: true
+        homeTvBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleFullBroadcaster'
+          nullable: true
+        homeRadioBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleFullBroadcaster'
+          nullable: true
+        awayTvBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleFullBroadcaster'
+          nullable: true
+        awayRadioBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleFullBroadcaster'
+          nullable: true
+      additionalProperties: false
+    ScheduleFullTeam:
+      type: object
+      properties:
+        teamId:
+          type: integer
+          format: int32
+        teamName:
+          type: string
+          nullable: true
+        teamCity:
+          type: string
+          nullable: true
+        teamTricode:
+          type: string
+          nullable: true
+        teamSlug:
+          type: string
+          nullable: true
+        wins:
+          type: integer
+          format: int32
+        losses:
+          type: integer
+          format: int32
+        score:
+          type: integer
+          format: int32
+      additionalProperties: false
+    ScheduleFullPointsLeader:
+      type: object
+      properties:
+        personId:
+          type: integer
+          format: int32
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+        teamId:
+          type: integer
+          format: int32
+        teamCity:
+          type: string
+          nullable: true
+        teamName:
+          type: string
+          nullable: true
+        teamTricode:
+          type: string
+          nullable: true
+        points:
+          type: number
+          format: double
+      additionalProperties: false
+    ScheduleFullGame:
+      type: object
+      properties:
+        gameId:
+          type: string
+          description: >-
+            Format: AABCCDDDDD AA=LeagueID, B=Season Type
+            (1=Pre,2=Reg,3=AllStar,4=Playoff,5=PlayIn), CC=SeasonYear last two
+            digits, DDDDD=game number
+          nullable: true
+        gameCode:
+          type: string
+          description: 'Format: [gameDate(YYYYMMDD)]/[AwayTeamAbr][HomeTeamAbr]'
+          nullable: true
+        seasonType:
+          type: string
+          description: Preseason, Regular Season, All-Star, PlayIn, Playoffs
+          nullable: true
+        gameStatus:
+          type: integer
+          description: 1 = Pregame, 2 = Live, 3 = Final
+          format: int32
+        gameStatusText:
+          type: string
+          description: "PreGame (gameStatus = 1):\r\nEST Time of the game for scheduled games.Eg. “9:30 pm ET” \r\nPostponed games: “PPD”\r\nCancelled games: “Cancelled”\r\nForfeited games: “Forfeit”\r\n\r\nLive Game (gameStatus = 2):\r\nDuring play: Quarter and game clock.Eg. “Q1 06:48”\r\nAt end of each quarter: “End Q1”\r\nAt halftime: “Half”\r\nPostponed games: “postponed”\r\nCancelled games: “cancelled”\r\n\r\nPost Game (gameStatus = 3)\r\nEnd of regulation game: “Final” \r\nEnd of overtime game: Single overtime: “Final OT”, Multi-overtime: “Final OT[Num OT Periods]” Eg. “Final OT2”"
+          nullable: true
+        gameSequence:
+          type: integer
+          description: Order number of the game sorted by time then game number
+          format: int32
+        gameDateEst:
+          type: string
+          format: date-time
+        gameTimeEst:
+          type: string
+          format: date-time
+        gameDateTimeEst:
+          type: string
+          format: date-time
+        gameDateUTC:
+          type: string
+          format: date-time
+        gameTimeUTC:
+          type: string
+          format: date-time
+        gameDateTimeUTC:
+          type: string
+          format: date-time
+        awayTeamTime:
+          type: string
+          description: Time in the away team's local market
+          format: date-time
+        homeTeamTime:
+          type: string
+          description: Time in the home team's local market
+          format: date-time
+        day:
+          type: string
+          description: 'Day of the week EST: Mon, Tue, Wed, Thu, Fri, Sat, Sun'
+          nullable: true
+        monthNum:
+          type: integer
+          description: Jan = 1, Feb = 2, Mar = 3.... Dec = 12
+          format: int32
+        weekNumber:
+          type: integer
+          description: >-
+            Week number of the season week 1 = the first week of the season and
+            not the calendar year
+          format: int32
+        weekName:
+          type: string
+          description: Week description
+          nullable: true
+        ifNecessary:
+          type: boolean
+          description: >-
+            Indicates whether a game should have an "if necessary" flag for
+            playoff games 5,6,7
+        seriesGameNumber:
+          type: string
+          description: >-
+            Playoff series game number (i.e. "Game 1"). Will be empty string for
+            non-playoff games
+          nullable: true
+        gameLabel:
+          type: string
+          description: >-
+            Additional text field for special games like Emirates NBA Cup
+            Championship
+          nullable: true
+        gameSublabel:
+          type: string
+          description: >-
+            Secondary additional text field for special games like Emirates NBA
+            Cup Championship
+          nullable: true
+        seriesText:
+          type: string
+          description: >-
+            Description of the playoff series. This field will also indicate
+            Neutral Site games with the value 'Neutral Site'.
+          nullable: true
+        arenaName:
+          type: string
+          nullable: true
+        arenaState:
+          type: string
+          nullable: true
+        arenaCity:
+          type: string
+          nullable: true
+        postponedStatus:
+          type: string
+          description: >-
+            Indicates if a game is postponed with "Y" for a Postponed game and
+            "N" or "A" for an Active Game. "A" will appear historically, but "N"
+            will appear 2024-25 onward.
+          nullable: true
+        branchLink:
+          type: string
+          description: Universal link to game details page for a game
+          nullable: true
+        actualStartTimeUTC:
+          type: string
+          description: UTC Time of the Jumpball event to start the game
+          nullable: true
+        actualEndTimeUTC:
+          type: string
+          description: UTC Time of the End of Period event for the last period of the game
+          nullable: true
+        gameDurationSeconds:
+          type: integer
+          description: >-
+            Duration of the game between jumpball and end of last period in
+            total seconds
+          format: int32
+          nullable: true
+        seriesConference:
+          type: string
+          description: >-
+            Conference of the series (East, West). Returns empty string for all
+            other games
+          nullable: true
+        gameSubtype:
+          type: string
+          description: >-
+            Game subtype (NBA 'in-season', 'in-season-knockout' for In-Season
+            Tournament, WNBA 'Commissioner' for Commissioner's Cup
+          nullable: true
+        isNeutral:
+          type: boolean
+          description: Indicates whether a game is played at a neutral site
+        broadcasters:
+          $ref: '#/components/schemas/ScheduleFullBroadcasters'
+        homeTeam:
+          $ref: '#/components/schemas/ScheduleFullTeam'
+        awayTeam:
+          $ref: '#/components/schemas/ScheduleFullTeam'
+        pointsLeaders:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleFullPointsLeader'
+          nullable: true
+      additionalProperties: false
+    ScheduleFullGameDate:
+      type: object
+      properties:
+        gameDate:
+          type: string
+          description: Game Date EST
+          nullable: true
+        games:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleFullGame'
+          nullable: true
+      additionalProperties: false
+    ScheduleFullWeek:
+      type: object
+      properties:
+        weekNumber:
+          type: integer
+          format: int32
+        weekName:
+          type: string
+          nullable: true
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+      additionalProperties: false
+    LeagueSchedule:
+      type: object
+      properties:
+        seasonYear:
+          type: string
+          description: Season YYYY-YY
+        leagueId:
+          type: string
+          description: 'NBA: 00, WNBA: 10, G League: 20, NBA2K: 12'
+          x-enumDescriptions:
+            '10': WNBA
+            '00': NBA
+        gameDates:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleFullGameDate'
+          nullable: true
+        weeks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleFullWeek'
+          description: Regular season week number and description
+          nullable: true
+      additionalProperties: false
+    ScheduleFullDataModel:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/ScheduleFullMeta'
+        leagueSchedule:
+          $ref: '#/components/schemas/LeagueSchedule'
+      additionalProperties: false
+    ScheduleRollingMeta:
+      type: object
+      properties:
+        version:
+          type: integer
+          format: int32
+        request:
+          type: string
+          nullable: true
+        time:
+          type: string
+          format: date-time
+      additionalProperties: false
+    ScheduleRollingBroadcaster:
+      type: object
+      properties:
+        broadcasterScope:
+          type: string
+          description: Away team's broadcaster = 'away', Home = 'home', National = 'natl'
+          nullable: true
+        broadcasterMedia:
+          type: string
+          description: TV = 'tv', Radio = 'radio'
+          nullable: true
+        broadcasterId:
+          type: integer
+          format: int32
+        broadcasterDisplay:
+          type: string
+          nullable: true
+        broadcasterAbbreviation:
+          type: string
+          nullable: true
+        tapeDelayComments:
+          type: string
+          nullable: true
+        broadcasterTeamId:
+          type: integer
+          description: Team ID of affiliated broadcaster. -1 for non-affliated broadcaster
+          nullable: true
+      additionalProperties: false
+    ScheduleRollingBroadcasters:
+      type: object
+      properties:
+        nationalBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleRollingBroadcaster'
+          nullable: true
+        homeTvBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleRollingBroadcaster'
+          nullable: true
+        homeRadioBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleRollingBroadcaster'
+          nullable: true
+        awayTvBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleRollingBroadcaster'
+          nullable: true
+        awayRadioBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleRollingBroadcaster'
+          nullable: true
+      additionalProperties: false
+    ScheduleRollingTeam:
+      type: object
+      properties:
+        teamId:
+          type: integer
+          format: int32
+        teamName:
+          type: string
+          nullable: true
+        teamCity:
+          type: string
+          nullable: true
+        teamTricode:
+          type: string
+          nullable: true
+        teamSlug:
+          type: string
+          nullable: true
+        wins:
+          type: integer
+          format: int32
+        losses:
+          type: integer
+          format: int32
+        score:
+          type: integer
+          format: int32
+      additionalProperties: false
+    ScheduleRollingPointsLeader:
+      type: object
+      properties:
+        personId:
+          type: integer
+          format: int32
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+        teamId:
+          type: integer
+          format: int32
+        teamCity:
+          type: string
+          nullable: true
+        teamName:
+          type: string
+          nullable: true
+        teamTricode:
+          type: string
+          nullable: true
+        points:
+          type: integer
+          format: int32
+      additionalProperties: false
+    ScheduleRollingGame:
+      type: object
+      properties:
+        gameId:
+          type: string
+          description: >-
+            Format: AABCCDDDDD AA=LeagueID, B=Season Type
+            (1=Pre,2=Reg,3=AllStar,4=Playoff,5=PlayIn), CC=SeasonYear last two
+            digits, DDDDD=game number
+          nullable: true
+        gameCode:
+          type: string
+          description: 'Format: [gameDate(YYYYMMDD)]/[AwayTeamAbr][HomeTeamAbr]'
+          nullable: true
+        gameStatus:
+          type: integer
+          description: 1 = Pregame, 2 = Live, 3 = Final
+          format: int32
+        gameStatusText:
+          type: string
+          description: "PreGame (gameStatus = 1):\r\nEST Time of the game for scheduled games.Eg. “9:30 pm ET” \r\nPostponed games: “PPD”\r\nCancelled games: “Cancelled”\r\nForfeited games: “Forfeit”\r\n\r\nLive Game (gameStatus = 2):\r\nDuring play: Quarter and game clock.Eg. “Q1 06:48”\r\nAt end of each quarter: “End Q1”\r\nAt halftime: “Half”\r\nPostponed games: “postponed”\r\nCancelled games: “cancelled”\r\n\r\nPost Game (gameStatus = 3)\r\nEnd of regulation game: “Final” \r\nEnd of overtime game: Single overtime: “Final OT”, Multi-overtime: “Final OT[Num OT Periods]” Eg. “Final OT2”"
+          nullable: true
+        gameSequence:
+          type: integer
+          description: Order number of the game sorted by time then game number
+          format: int32
+        period:
+          type: integer
+          format: int32
+        clock:
+          type: string
+          nullable: true
+        gameDateEst:
+          type: string
+          format: date-time
+        gameTimeEst:
+          type: string
+          format: date-time
+        gameDateTimeEst:
+          type: string
+          format: date-time
+        gameDateUTC:
+          type: string
+          format: date-time
+        gameTimeUTC:
+          type: string
+          format: date-time
+        gameDateTimeUTC:
+          type: string
+          format: date-time
+        visitorTeamTime:
+          type: string
+          description: Time in the away team's local market
+          format: date-time
+        homeTeamTime:
+          type: string
+          description: Time in the home team's local market
+          format: date-time
+        day:
+          type: string
+          description: 'Day of the week EST: Mon, Tue, Wed, Thu, Fri, Sat, Sun'
+          nullable: true
+        arenaName:
+          type: string
+          nullable: true
+        arenaState:
+          type: string
+          nullable: true
+        arenaCity:
+          type: string
+          nullable: true
+        postponedStatus:
+          type: string
+          description: >-
+            Indicates if a game is postponed with "Y" for a Postponed game and
+            "N" or "A" for an Active Game. "A" will appear historically, but "N"
+            will appear 2024-25 onward.
+          nullable: true
+        seriesGameNumber:
+          type: string
+          description: "Playoffs: Game number in the series\r\n\r\nExamples\r\n\"Game 1\"\r\n\"Game 2\"\r\n\"Game 3\"\r\n\"Game 4\"\r\n\"Game 5\"\r\n\"Game 6\"\r\n\"Game 7\""
+          nullable: true
+        gameLabel:
+          type: string
+          description: >-
+            Additional text field for special games like Emirates NBA Cup
+            Championship
+          nullable: true
+        gameSublabel:
+          type: string
+          description: >-
+            Secondary additional text field for special games like Emirates NBA
+            Cup Championship
+          nullable: true
+        seriesText:
+          type: string
+          description: "Description of the playoff series. This field will also indicate Neutral Site games with the value 'Neutral Site'.\r\n[TEAM TRICODE] wins series [NUMBER OF LEADER WINS]-[NUMBER OF LOSER WINS]\r\n[TEAM TRICODE] leads series [NUMBER OF LEADER WINS]-[NUMBER OF TRAILING WINS]\r\nSeries tied[NUMBER OF LEADER WINS]-[NUMBER OF TRAILING WINS]\r\n\r\nExamples\r\n\"PHI wins series 4-2\"\r\n\"PHI leads series 2-1\"\r\n\"Series tied 3-3\""
+          nullable: true
+        ifNecessary:
+          type: boolean
+          description: >-
+            Indicates whether a game should have an "if necessary" flag for
+            playoff games 5,6,7
+        gameSubtype:
+          type: string
+          description: >-
+            Game subtype (NBA 'in-season', 'in-season-knockout' for In-Season
+            Tournament, WNBA 'Commissioner' for Commissioner's Cup
+          nullable: true
+        seasonYear:
+          type: string
+          description: Season YYYY-YY format
+          nullable: true
+        seasonType:
+          type: string
+          description: >-
+            Season Types Regular Season|Pre Season|Preseason|Playoffs|All
+            Star|All-Star|The Turn|The Ticket|PlayIn
+          nullable: true
+        isNeutral:
+          type: boolean
+          description: Indicates whether a game is played at a neutral site
+        broadcasters:
+          $ref: '#/components/schemas/ScheduleRollingBroadcasters'
+        homeTeam:
+          $ref: '#/components/schemas/ScheduleRollingTeam'
+        visitorTeam:
+          $ref: '#/components/schemas/ScheduleRollingTeam'
+        pointsLeaders:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleRollingPointsLeader'
+          nullable: true
+      additionalProperties: false
+    ScheduleRollingGameDate:
+      type: object
+      properties:
+        gameDate:
+          type: string
+          description: Game Date EST
+          nullable: true
+        games:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleRollingGame'
+          nullable: true
+      additionalProperties: false
+    RollingSchedule:
+      type: object
+      properties:
+        gameDate:
+          type: string
+          description: Game Date EST
+          nullable: true
+        leagueId:
+          type: string
+          description: 'NBA: 00, WNBA: 10, G League: 20, NBA2K: 12'
+          nullable: true
+        gameDates:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleRollingGameDate'
+          nullable: true
+      additionalProperties: false
+    ScheduleRollingDataModel:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/ScheduleRollingMeta'
+        rollingSchedule:
+          $ref: '#/components/schemas/RollingSchedule'
+      additionalProperties: false
+    GamesByDayMeta:
+      type: object
+      properties:
+        version:
+          type: integer
+          format: int32
+        request:
+          type: string
+          nullable: true
+        time:
+          type: string
+          nullable: true
+      additionalProperties: false
+    GamesByDayTeam:
+      type: object
+      properties:
+        gameId:
+          type: string
+          description: Game ID for the game that this team is playing in on this date
+          nullable: true
+        teamId:
+          type: integer
+          format: int32
+        teamCity:
+          type: string
+          nullable: true
+        teamName:
+          type: string
+          nullable: true
+        teamAbbreviation:
+          type: string
+          nullable: true
+      additionalProperties: false
+    GamesByDayDate:
+      type: object
+      properties:
+        date:
+          type: string
+          description: Calendar date
+          nullable: true
+        count:
+          type: integer
+          description: Number of games for this league on this date
+          format: int32
+        teams:
+          type: array
+          items:
+            $ref: '#/components/schemas/GamesByDayTeam'
+          description: Array of teams playing on this date
+          nullable: true
+      additionalProperties: false
+    GamesByDay:
+      type: object
+      properties:
+        leagueId:
+          type: string
+          nullable: true
+        dates:
+          type: array
+          items:
+            $ref: '#/components/schemas/GamesByDayDate'
+          nullable: true
+      additionalProperties: false
+    GamesByDayDataModel:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/GamesByDayMeta'
+        gamesByDay:
+          $ref: '#/components/schemas/GamesByDay'
+      additionalProperties: false
+    SeasonCalendarDataModel:
+      type: object
+      properties:
+        seasonDateEst:
+          type: string
+          description: Date in the calendar EST
+          format: date-time
+        statsSeasonId:
+          type: string
+          description: Stats - Five digit season ID
+          nullable: true
+        statsSeasonYear:
+          type: string
+          description: Stats - Seven digit season year YYYY-YY or YYYY format
+          nullable: true
+        statsYear:
+          type: string
+          description: Stats - Four digit year YYYY format
+          nullable: true
+        statsSeasonType:
+          type: string
+          description: >-
+            Stats - Season type: Preseason, Regular Season, All-Star, PlayIn,
+            Playoffs
+          nullable: true
+        rosterSeasonId:
+          type: string
+          description: Rosters - Five digit season ID
+          nullable: true
+        rosterSeasonYear:
+          type: string
+          description: Rosters - Seven digit season year YYYY-YY or YYYY format
+          nullable: true
+        rosterYear:
+          type: string
+          description: Rosters - Four digit year YYYY format
+          nullable: true
+        rosterSeasonType:
+          type: string
+          description: >-
+            Rosters - Season type: Preseason, Regular Season, All-Star, PlayIn,
+            Playoffs
+          nullable: true
+        scheduleSeasonId:
+          type: string
+          description: Schedule - Five digit season ID
+          nullable: true
+        scheduleSeasonYear:
+          type: string
+          description: Schedule - Seven digit season year YYYY-YY or YYYY format
+          nullable: true
+        scheduleYear:
+          type: string
+          description: Schedule - Four digit year YYYY format
+          nullable: true
+        scheduleSeasonType:
+          type: string
+          description: >-
+            Schedule - Season type: Preseason, Regular Season, All-Star, PlayIn,
+            Playoffs
+          nullable: true
+        standingsSeasonId:
+          type: string
+          description: Standings - Five digit season ID
+          nullable: true
+        standingsSeasonYear:
+          type: string
+          description: Standings - Seven digit season year YYYY-YY or YYYY format
+          nullable: true
+        standingsYear:
+          type: string
+          description: Standings - Four digit year YYYY format
+          nullable: true
+        standingsSeasonType:
+          type: string
+          description: >-
+            Standings - Season type: Preseason, Regular Season, All-Star,
+            PlayIn, Playoffs
+          nullable: true
+      additionalProperties: false
+    ScheduleBroadcastersDataModel:
+      type: object
+      properties:
+        leagueId:
+          type: string
+          description: 'NBA: 00, WNBA: 10, G League: 20'
+          nullable: true
+        seasonYear:
+          type: string
+          description: Season YYYY-YY
+          nullable: true
+        gameDates:
+          type: array
+          items:
+            $ref: '#/components/schemas/BroadcasterDate'
+          description: List of game dates in the season
+          nullable: true
+      additionalProperties: false
+    BroadcasterDate:
+      type: object
+      properties:
+        gameDate:
+          type: string
+          description: Game Date
+          nullable: true
+        games:
+          type: array
+          items:
+            $ref: '#/components/schemas/BroadcastersGame'
+          description: List of games on the game date
+          nullable: true
+      additionalProperties: false
+    BroadcastersBroadcast:
+      type: object
+      properties:
+        broadcasterId:
+          type: integer
+          description: Unique broadcaster ID
+          format: int32
+        broadcastDisplay:
+          type: string
+          description: Display name
+          nullable: true
+        broadcasterVideoLink:
+          type: string
+          description: Url to broadcaster watch link
+          nullable: true
+        regionId:
+          type: integer
+          description: >-
+            Domestic Region ID mapping\r\nFor region ID mapping see Schedule API
+            Guide in Get Started Tab
+          format: int32
+        broadcasterTeamId:
+          type: integer
+          description: Team ID of affiliated broadcaster. -1 for non-affliated broadcaster
+          nullable: true
+        broadcasterDescription:
+          type: string
+          description: Broadcaster description
+          nullable: true
+      additionalProperties: false
+    BroadcastersGame:
+      type: object
+      properties:
+        nationalBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/BroadcastersBroadcast'
+          description: List of domestic national TV broadcasters
+          nullable: true
+        nationalRadioBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/BroadcastersBroadcast'
+          description: List of domestic national radio broadcasters
+          nullable: true
+        nationalOttBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/BroadcastersBroadcast'
+          description: List of domestic national OTT broadcasters
+          nullable: true
+        homeTvBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/BroadcastersBroadcast'
+          description: List of home team TV broadcasters
+          nullable: true
+        homeRadioBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/BroadcastersBroadcast'
+          description: List of home team radio broadcasters
+          nullable: true
+        homeOttBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/BroadcastersBroadcast'
+          description: List of home team OTT broadcasters
+          nullable: true
+        awayTvBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/BroadcastersBroadcast'
+          description: List of away team TV broadcasters
+          nullable: true
+        awayRadioBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/BroadcastersBroadcast'
+          description: List of away team radio broadcasters
+          nullable: true
+        awayOttBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/BroadcastersBroadcast'
+          description: List of away team OTT broadcasters
+          nullable: true
+        intlTvBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/BroadcastersBroadcast'
+          description: List of international TV broadcasters
+          nullable: true
+        intlRadioBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/BroadcastersBroadcast'
+          description: List of international radio broadcasters
+          nullable: true
+        intlOttBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/BroadcastersBroadcast'
+          description: List of international radio OTT broadcasters
+          nullable: true
+        gameId:
+          type: string
+          description: >-
+            Format: AABCCDDDDD AA=LeagueID B=Season Type
+            (1=Pre2=Reg3=AllStar4=Playoff5=PlayIn) CC=SeasonYear last two digits
+            DDDDD=game number
+          nullable: true
+      additionalProperties: false
+    ScoreboardMeta:
+      type: object
+      properties:
+        version:
+          type: integer
+          format: int32
+        request:
+          type: string
+          nullable: true
+        time:
+          type: string
+          format: date-time
+      additionalProperties: false
+    ScoreboardArena:
+      type: object
+      properties:
+        arenaName:
+          type: string
+          nullable: true
+        arenaState:
+          type: string
+          nullable: true
+        arenaCity:
+          type: string
+          nullable: true
+      additionalProperties: false
+    ScoreboardLeaders:
+      type: object
+      properties:
+        personId:
+          type: integer
+          format: int32
+        name:
+          type: string
+          nullable: true
+        jerseyNum:
+          type: string
+          nullable: true
+        position:
+          type: string
+          nullable: true
+        teamTricode:
+          type: string
+          nullable: true
+        playerSlug:
+          type: string
+          nullable: true
+        points:
+          type: integer
+          format: int32
+        rebounds:
+          type: integer
+          format: int32
+        assists:
+          type: integer
+          format: int32
+        blocks:
+          type: integer
+          format: int32
+        steals:
+          type: integer
+          format: int32
+      additionalProperties: false
+    ScoreboardGameLeaders:
+      type: object
+      properties:
+        homeLeaders:
+          $ref: '#/components/schemas/ScoreboardLeaders'
+        awayLeaders:
+          $ref: '#/components/schemas/ScoreboardLeaders'
+      additionalProperties: false
+    ScoreboardTeamLeader:
+      type: object
+      properties:
+        personId:
+          type: integer
+          format: int32
+        name:
+          type: string
+          nullable: true
+        jerseyNum:
+          type: string
+          nullable: true
+        position:
+          type: string
+          nullable: true
+        teamTricode:
+          type: string
+          nullable: true
+        playerSlug:
+          type: string
+          nullable: true
+        points:
+          type: number
+          format: double
+        rebounds:
+          type: number
+          format: double
+        assists:
+          type: number
+          format: double
+      additionalProperties: false
+    ScoreboardTeamLeaders:
+      type: object
+      properties:
+        homeLeaders:
+          $ref: '#/components/schemas/ScoreboardTeamLeader'
+        awayLeaders:
+          $ref: '#/components/schemas/ScoreboardTeamLeader'
+        seasonLeadersFlag:
+          type: integer
+          format: int32
+      additionalProperties: false
+    ScoreboardBroadcaster:
+      type: object
+      properties:
+        broadcasterId:
+          type: integer
+          description: Integer ID for the broadcaster
+          format: int32
+        broadcastDisplay:
+          type: string
+          description: Display name
+          nullable: true
+        broadcasterVideoLink:
+          type: string
+          description: Url to broadcaster watch link
+          nullable: true
+      additionalProperties: false
+      description: TV and radio broadcaster
+    ScoreboardBroadcasters:
+      type: object
+      properties:
+        nationalBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScoreboardBroadcaster'
+          nullable: true
+        homeTvBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScoreboardBroadcaster'
+          nullable: true
+        homeRadioBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScoreboardBroadcaster'
+          nullable: true
+        awayTvBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScoreboardBroadcaster'
+          nullable: true
+        awayRadioBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScoreboardBroadcaster'
+          nullable: true
+        intlTvBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScoreboardBroadcaster'
+          nullable: true
+        intlRadioBroadcasters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScoreboardBroadcaster'
+          nullable: true
+      additionalProperties: false
+    ScoreboardPeriod:
+      type: object
+      properties:
+        period:
+          type: integer
+          format: int32
+        periodType:
+          type: string
+          description: The type of period REGULAR(Default), OVERTIME
+          nullable: true
+        score:
+          type: integer
+          format: int32
+      additionalProperties: false
+    ScoreboardProjectedStarters:
+      type: object
+      properties:
+        personId:
+          type: integer
+          format: int32
+        position:
+          type: string
+          description: Starting position for the player
+          nullable: true
+        lastName:
+          type: string
+          description: Player's last name
+          nullable: true
+        firstName:
+          type: string
+          description: Player's first name
+          nullable: true
+        status:
+          type: string
+          description: 'Status for the starter: Expected or Confirmed'
+          nullable: true
+      additionalProperties: false
+    ScoreboardTeam:
+      type: object
+      properties:
+        teamId:
+          type: integer
+          format: int32
+        teamName:
+          type: string
+          nullable: true
+        teamCity:
+          type: string
+          nullable: true
+        teamTricode:
+          type: string
+          nullable: true
+        wins:
+          type: integer
+          format: int32
+        losses:
+          type: integer
+          format: int32
+        score:
+          type: integer
+          format: int32
+        inBonus:
+          type: string
+          description: Is this team currently in bonus 0 = No(Default) 1 = Yes
+          nullable: true
+        timeoutsRemaining:
+          type: integer
+          format: int32
+        periods:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScoreboardPeriod'
+          nullable: true
+        starters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScoreboardProjectedStarters'
+          description: Projected starters. Once official, indicates the confirmed starters
+          nullable: true
+      additionalProperties: false
+    ScoreboardGame:
+      type: object
+      properties:
+        gameId:
+          type: string
+          description: >-
+            Format: AABCCDDDDD AA=LeagueID, B=Season Type
+            (1=Pre,2=Reg,3=AllStar,4=Playoff,5=PlayIn), CC=SeasonYear last two
+            digits, DDDDD=game number
+          nullable: true
+        gameCode:
+          type: string
+          description: 'Format: [gameDate(YYYYMMDD)]/[AwayTeamAbr][HomeTeamAbr]'
+          nullable: true
+        messageReceivedEpoch:
+          type: number
+          description: Epoch time the message was received from courtside
+          format: double
+          nullable: true
+        messageReceived:
+          type: string
+          description: Time the message was received from courtside
+          nullable: true
+        gameStatus:
+          type: integer
+          description: 1 = Pregame, 2 = Live, 3 = Final
+          format: int32
+        gameStatusText:
+          type: string
+          description: "PreGame (gameStatus = 1):\r\nEST Time of the game for scheduled games.Eg. “9:30 pm ET” \r\nPostponed games: “PPD”\r\nCancelled games: “Cancelled”\r\nForfeited games: “Forfeit”\r\n\r\nLive Game (gameStatus = 2):\r\nDuring play: Quarter and game clock.Eg. “Q1 06:48”\r\nAt end of each quarter: “End Q1”\r\nAt halftime: “Half”\r\nPostponed games: “postponed”\r\nCancelled games: “cancelled”\r\n\r\nPost Game (gameStatus = 3)\r\nEnd of regulation game: “Final” \r\nEnd of overtime game: Single overtime: “Final OT”, Multi-overtime: “Final OT[Num OT Periods]” Eg. “Final OT2”"
+          nullable: true
+        gameBreakStatus:
+          type: string
+          description: Status to be displayed during game breaks
+          nullable: true
+        period:
+          type: integer
+          format: int32
+        gameClock:
+          type: string
+          description: 'Format is: PTmmMss.ccS'
+          nullable: true
+        gameTimeUTC:
+          type: string
+          format: date-time
+        gameEt:
+          type: string
+          format: date-time
+        seasonYear:
+          type: string
+          description: Season YYYY-YY format
+          nullable: true
+        seasonType:
+          type: string
+          description: >-
+            Season Types Regular Season|Pre Season|Preseason|Playoffs|All
+            Star|All-Star|The Turn|The Ticket|PlayIn
+          nullable: true
+        regulationPeriods:
+          type: integer
+          format: int32
+        seriesGameNumber:
+          type: string
+          description: "Playoffs: Game number in the series\r\n\r\nExamples\r\n\"Game 1\"\r\n\"Game 2\"\r\n\"Game 3\"\r\n\"Game 4\"\r\n\"Game 5\"\r\n\"Game 6\"\r\n\"Game 7\""
+          nullable: true
+        seriesText:
+          type: string
+          description: "Description of the playoff series. This field will also indicate Neutral Site games with the value 'Neutral Site'.\r\n[TEAM TRICODE] wins series [NUMBER OF LEADER WINS]-[NUMBER OF LOSER WINS]\r\n[TEAM TRICODE] leads series [NUMBER OF LEADER WINS]-[NUMBER OF TRAILING WINS]\r\nSeries tied[NUMBER OF LEADER WINS]-[NUMBER OF TRAILING WINS]\r\n\r\nExamples\r\n\"PHI wins series 4-2\"\r\n\"PHI leads series 2-1\"\r\n\"Series tied 3-3\""
+          nullable: true
+        gameLabel:
+          type: string
+          description: >-
+            Additional text field for special games like Emirates NBA Cup
+            Championship
+          nullable: true
+        gameSublabel:
+          type: string
+          description: >-
+            Secondary additional text field for special games like Emirates NBA
+            Cup Championship
+          nullable: true
+        isNeutral:
+          type: boolean
+          description: Indicates whether a game is played at a neutral site
+        arena:
+          $ref: '#/components/schemas/ScoreboardArena'
+        gameLeaders:
+          $ref: '#/components/schemas/ScoreboardGameLeaders'
+        teamLeaders:
+          $ref: '#/components/schemas/ScoreboardTeamLeaders'
+        broadcasters:
+          $ref: '#/components/schemas/ScoreboardBroadcasters'
+        homeTeam:
+          $ref: '#/components/schemas/ScoreboardTeam'
+        awayTeam:
+          $ref: '#/components/schemas/ScoreboardTeam'
+      additionalProperties: false
+    Scoreboard:
+      type: object
+      properties:
+        gameDate:
+          type: string
+          description: Game Date EST
+          nullable: true
+        leagueId:
+          type: string
+          description: 'NBA: 00, WNBA: 10, G League: 20, NBA2K: 12'
+          nullable: true
+        leagueName:
+          type: string
+          nullable: true
+        games:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScoreboardGame'
+          nullable: true
+      additionalProperties: false
+    ScoreboardDataModel:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/ScoreboardMeta'
+        scoreboard:
+          $ref: '#/components/schemas/Scoreboard'
+      additionalProperties: false
+    StandingsMeta:
+      type: object
+      properties:
+        version:
+          type: integer
+          format: int32
+        time:
+          type: string
+          format: date-time
+      additionalProperties: false
+    StandingsTeam:
+      type: object
+      properties:
+        teamId:
+          type: integer
+          format: int32
+        teamCity:
+          type: string
+          nullable: true
+        teamName:
+          type: string
+          nullable: true
+        teamSlug:
+          type: string
+          nullable: true
+        teamAbbreviation:
+          type: string
+          nullable: true
+        conference:
+          type: string
+          nullable: true
+        conferenceRecord:
+          type: string
+          nullable: true
+        playoffRank:
+          type: integer
+          format: int32
+        clinchIndicator:
+          type: string
+          description: "x - Clinched Playoff Berth\r\no - Eliminated from Playoffs contention\r\ne - Clinched Eastern Conference\r\nw - Clinched Western Conference\r\nnw - Clinched Northwest Division\r\np - Clinched Pacific Division\r\nsw - Clinched Southwest Division\r\na - Clinched Atlantic Division\r\nc - Clinched Central Division\r\nse - Clinched Southeast Division\r\npi - Clinched Play-In"
+          nullable: true
+        division:
+          type: string
+          nullable: true
+        divisionRecord:
+          type: string
+          nullable: true
+        divisionRank:
+          type: integer
+          format: int32
+        wins:
+          type: integer
+          format: int32
+        losses:
+          type: integer
+          format: int32
+        winPct:
+          type: number
+          format: double
+        leagueRank:
+          type: integer
+          format: int32
+        record:
+          type: string
+          nullable: true
+        home:
+          type: string
+          nullable: true
+        road:
+          type: string
+          nullable: true
+        neutral:
+          type: string
+          nullable: true
+        l10:
+          type: string
+          nullable: true
+        l10Home:
+          type: string
+          nullable: true
+        l10Road:
+          type: string
+          nullable: true
+        ot:
+          type: string
+          nullable: true
+        threePtsOrLess:
+          type: string
+          nullable: true
+        tenPtsOrMore:
+          type: string
+          nullable: true
+        longHomeStreak:
+          type: integer
+          description: Longest home winning streak
+          format: int32
+        longHomeStreakText:
+          type: string
+          nullable: true
+        longRoadStreak:
+          type: integer
+          description: Longest road winning streak
+          format: int32
+        longRoadStreakText:
+          type: string
+          nullable: true
+        longWinStreak:
+          type: integer
+          description: Longest winning streak
+          format: int32
+        longLossStreak:
+          type: integer
+          description: Longest losing streak
+          format: int32
+        currentHomeStreak:
+          type: integer
+          description: >-
+            Current home streak. Positive = winning streak, Negative = losing
+            streak
+          format: int32
+        currentHomeStreakText:
+          type: string
+          nullable: true
+        currentRoadStreak:
+          type: integer
+          description: >-
+            Current road streak. Positive = winning streak, Negative = losing
+            streak
+          format: int32
+        currentRoadStreakText:
+          type: string
+          nullable: true
+        currentStreak:
+          type: integer
+          description: Current streak. Positive = winning streak, Negative = losing streak
+          format: int32
+        currentStreakText:
+          type: string
+          nullable: true
+        conferenceGamesBack:
+          type: number
+          format: double
+        divisionGamesBack:
+          type: number
+          format: double
+        leagueGamesBack:
+          type: number
+          format: double
+        clinchedConference:
+          type: integer
+          description: 1 = clinched top seed in conference
+          format: int32
+        clinchedDivision:
+          type: integer
+          description: 1 = clinched top seed in division
+          format: int32
+        clinchedPlayoffs:
+          type: integer
+          description: 1 = clinched a playoff spot
+          format: int32
+        eliminatedConference:
+          type: integer
+          description: 1 = eliminated from conference
+          format: int32
+        eliminatedDivision:
+          type: integer
+          description: 1 = eliminated from division
+          format: int32
+        aheadAtHalf:
+          type: string
+          description: Record in games where team was winning at halftime
+          nullable: true
+        behindAtHalf:
+          type: string
+          description: Record in games where team was losing at halftime
+          nullable: true
+        tiedAtHalf:
+          type: string
+          description: Record in games where team was tied at halftime
+          nullable: true
+        aheadAtThird:
+          type: string
+          description: Record in games where team was ahead at the start of the 3rd quarter
+          nullable: true
+        behindAtThird:
+          type: string
+          description: >-
+            Record in games where team was behind at the start of the 3rd
+            quarter
+          nullable: true
+        tiedAtThird:
+          type: string
+          description: Record in games where team was tied at the start of the 3rd quarter
+          nullable: true
+        score100Pts:
+          type: string
+          description: Record in games where team scores 100+ pts
+          nullable: true
+        oppScore100Pts:
+          type: string
+          description: Record in games where opponent scores 100+ pts
+          nullable: true
+        oppOver500:
+          type: string
+          description: Record in games where opponent had a win% over .500
+          nullable: true
+        leadInFgPct:
+          type: string
+          description: Record in games where team had higher FG% than opponent
+          nullable: true
+        leadInReb:
+          type: string
+          description: Record in games where team had more rebounds than opponent
+          nullable: true
+        fewerTurnovers:
+          type: string
+          description: Record in games where team had fewer turnovers than opponent
+          nullable: true
+        pointsPg:
+          type: number
+          format: double
+        oppPointsPg:
+          type: number
+          format: double
+        diffPtsPg:
+          type: number
+          format: double
+        vsEast:
+          type: string
+          nullable: true
+        vsAtlantic:
+          type: string
+          nullable: true
+        vsCentral:
+          type: string
+          nullable: true
+        vsSoutheast:
+          type: string
+          nullable: true
+        vsWest:
+          type: string
+          nullable: true
+        vsNorthwest:
+          type: string
+          nullable: true
+        vsPacific:
+          type: string
+          nullable: true
+        vsSouthwest:
+          type: string
+          nullable: true
+        jan:
+          type: string
+          nullable: true
+        feb:
+          type: string
+          nullable: true
+        mar:
+          type: string
+          nullable: true
+        apr:
+          type: string
+          nullable: true
+        may:
+          type: string
+          nullable: true
+        jun:
+          type: string
+          nullable: true
+        jul:
+          type: string
+          nullable: true
+        aug:
+          type: string
+          nullable: true
+        sep:
+          type: string
+          nullable: true
+        oct:
+          type: string
+          nullable: true
+        nov:
+          type: string
+          nullable: true
+        dec:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+          description: >-
+            Sort that can be used based on the grouping.
+            League/Conference/Division
+          format: int32
+          nullable: true
+      additionalProperties: false
+    LeagueStandings:
+      type: object
+      properties:
+        leagueId:
+          type: string
+          description: 'NBA: 00, WNBA: 10, G League: 20, NBA2K: 12'
+          nullable: true
+        seasonYear:
+          type: string
+          description: Season YYYY-YY
+          nullable: true
+        teams:
+          type: array
+          items:
+            $ref: '#/components/schemas/StandingsTeam'
+          nullable: true
+      additionalProperties: false
+    StandingsDataModel:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/StandingsMeta'
+        leagueStandings:
+          $ref: '#/components/schemas/LeagueStandings'
+      additionalProperties: false
+    BoxScoreArena:
+      type: object
+      properties:
+        arenaId:
+          type: integer
+          format: int32
+          nullable: true
+        arenaName:
+          type: string
+          nullable: true
+      additionalProperties: false
+    BoxScorePlayerStatistics:
+      type: object
+      properties:
+        assists:
+          type: integer
+          format: int32
+          nullable: true
+        blocks:
+          type: integer
+          format: int32
+          nullable: true
+        blocksReceived:
+          type: integer
+          format: int32
+          nullable: true
+        fieldGoalsAttempted:
+          type: integer
+          format: int32
+          nullable: true
+        fieldGoalsMade:
+          type: integer
+          format: int32
+          nullable: true
+        fieldGoalsPercentage:
+          type: number
+          format: double
+          nullable: true
+        foulsDrawn:
+          type: integer
+          format: int32
+          nullable: true
+        foulsPersonal:
+          type: integer
+          format: int32
+          nullable: true
+        freeThrowsAttempted:
+          type: integer
+          format: int32
+          nullable: true
+        freeThrowsMade:
+          type: integer
+          format: int32
+          nullable: true
+        freeThrowsPercentage:
+          type: number
+          format: double
+          nullable: true
+        minutes:
+          type: string
+          nullable: true
+        minutesCalculated:
+          type: string
+          nullable: true
+        plusMinusPoints:
+          type: number
+          format: double
+          nullable: true
+        points:
+          type: integer
+          format: int32
+          nullable: true
+        reboundsDefensive:
+          type: integer
+          format: int32
+          nullable: true
+        reboundsOffensive:
+          type: integer
+          format: int32
+          nullable: true
+        reboundsTotal:
+          type: integer
+          format: int32
+          nullable: true
+        steals:
+          type: integer
+          format: int32
+          nullable: true
+        threePointersAttempted:
+          type: integer
+          format: int32
+          nullable: true
+        threePointersMade:
+          type: integer
+          format: int32
+          nullable: true
+        threePointersPercentage:
+          type: number
+          format: double
+          nullable: true
+        turnovers:
+          type: integer
+          format: int32
+          nullable: true
+      additionalProperties: false
+    BoxScorePlayer:
+      type: object
+      properties:
+        status:
+          type: string
+          description: >-
+            ACTIVE = available to play in the game, INACTIVE = not available to
+            play
+          nullable: true
+        notPlayingReason:
+          type: string
+          description: "DND_COACH DND - Coach's Decision\r\nDND_INJURY DND - Injury/Illness\r\nDND_PERSONAL DND - Personal\r\nDND_REST DND - Rest\r\nDND_TRADE DND - Trade Pending\r\nDNP_COACH DNP - Coach's Decision\r\nDNP_INJURY DNP - Injury/Illness\r\nDNP_PERSONAL DNP - Personal\r\nDNP_REST DNP - Rest\r\nINACTIVE_COACH Inactive - Coach's Decision\r\nINACTIVE_GLEAGUE Inactive - G League Team\r\nINACTIVE_GLEAGUE_ON_ASSIG Inactive - G League - On Assignment\r\nINACTIVE_GLEAGUE_TWOWAY Inactive - G League - Two-Way\r\nINACTIVE_HEALTH_AND_SAFETY_PROTOCOLS Inactive - Health and Safety Protocols\r\nINACTIVE_INJURY Inactive - Injury/Illness\r\nINACTIVE_LEAGUE_SUSPENSIO Inactive - League Suspension\r\nINACTIVE_NOT_WITH_TEAM Inactive - Not With Team\r\nINACTIVE_PERSONAL Inactive - Personal\r\nINACTIVE_REST Inactive - Rest\r\nINACTIVE_SELF_ISOLATING Inactive - Self Isolating\r\nINACTIVE_SUSPENDED Inactive - Suspended\r\nINACTIVE_TEAM_SUSPENSION Inactive - Team Suspension\r\nINACTIVE_TRADE Inactive - Trade Pending\r\nNWT_COACH NWT - Coach's Decision\r\nNWT_HEALTH_AND_SAFETY_PROTOCOLS NWT - Health and Safety Protocols\r\nNWT_INJURY NWT - Injury/Illness\r\nNWT_NOT_WITH_TEAM NWT - Not With Team\r\nNWT_PERSONAL NWT - Personal\r\nNWT_REST NWT - Rest\r\nNWT_SELF_ISOLATING NWT - Self Isolating\r\nNWT_SUSPENDED NWT - Suspended\r\nNWT_TRADE NWT - Trade Pending"
+          nullable: true
+        notPlayingDescription:
+          type: string
+          description: Comments from statistician about the not playing reason
+          nullable: true
+        order:
+          type: integer
+          description: >-
+            The order the player should be displayed on a boxscore. Starters
+            first in F,F,C,G,G order followed by bench players in order of
+            appearance
+          format: int32
+          nullable: true
+        personId:
+          type: integer
+          format: int32
+        jerseyNum:
+          type: string
+          nullable: true
+        position:
+          type: string
+          nullable: true
+        starter:
+          type: string
+          description: 1 = starting player, 0 = bench
+          nullable: true
+        oncourt:
+          type: string
+          description: 1 = player is currently on the court, 0 = currently on the bench
+          nullable: true
+        played:
+          type: string
+          description: 1 = player played in the game, 0 = player did not play
+          nullable: true
+        statistics:
+          $ref: '#/components/schemas/BoxScorePlayerStatistics'
+        name:
+          type: string
+          description: Full name
+          nullable: true
+        nameI:
+          type: string
+          description: First initial, last name
+          nullable: true
+        firstName:
+          type: string
+          nullable: true
+        familyName:
+          type: string
+          nullable: true
+      additionalProperties: false
+    BoxScoreTeamStatistics:
+      type: object
+      properties:
+        assists:
+          type: integer
+          format: int32
+          nullable: true
+        blocks:
+          type: integer
+          format: int32
+          nullable: true
+        blocksReceived:
+          type: integer
+          format: int32
+          nullable: true
+        fieldGoalsAttempted:
+          type: integer
+          format: int32
+          nullable: true
+        fieldGoalsMade:
+          type: integer
+          format: int32
+          nullable: true
+        fieldGoalsPercentage:
+          type: number
+          format: double
+          nullable: true
+        foulsDrawn:
+          type: integer
+          format: int32
+          nullable: true
+        foulsPersonal:
+          type: integer
+          format: int32
+          nullable: true
+        foulsTechnical:
+          type: integer
+          format: int32
+          nullable: true
+        freeThrowsAttempted:
+          type: integer
+          format: int32
+          nullable: true
+        freeThrowsMade:
+          type: integer
+          format: int32
+          nullable: true
+        freeThrowsPercentage:
+          type: number
+          format: double
+          nullable: true
+        minutes:
+          type: string
+          nullable: true
+        plusMinusPoints:
+          type: number
+          format: double
+          nullable: true
+        points:
+          type: integer
+          format: int32
+          nullable: true
+        pointsFastBreak:
+          type: integer
+          format: int32
+          nullable: true
+        pointsInThePaint:
+          type: integer
+          format: int32
+          nullable: true
+        pointsSecondChance:
+          type: integer
+          format: int32
+          nullable: true
+        reboundsDefensive:
+          type: integer
+          format: int32
+          nullable: true
+        reboundsOffensive:
+          type: integer
+          format: int32
+          nullable: true
+        reboundsTotal:
+          type: integer
+          format: int32
+          nullable: true
+        steals:
+          type: integer
+          format: int32
+          nullable: true
+        threePointersAttempted:
+          type: integer
+          format: int32
+          nullable: true
+        threePointersMade:
+          type: integer
+          format: int32
+          nullable: true
+        threePointersPercentage:
+          type: number
+          format: double
+          nullable: true
+        turnovers:
+          type: integer
+          format: int32
+          nullable: true
+        assistsTurnoverRatio:
+          type: number
+          format: double
+          nullable: true
+        benchPoints:
+          type: integer
+          format: int32
+          nullable: true
+        biggestLead:
+          type: integer
+          format: int32
+          nullable: true
+        biggestScoringRun:
+          type: integer
+          format: int32
+          nullable: true
+        foulsTeam:
+          type: integer
+          format: int32
+          nullable: true
+        foulsTeamTechnical:
+          type: integer
+          format: int32
+          nullable: true
+        leadChanges:
+          type: integer
+          format: int32
+          nullable: true
+        pointsFromTurnovers:
+          type: integer
+          format: int32
+          nullable: true
+        reboundsPersonal:
+          type: integer
+          format: int32
+          nullable: true
+        reboundsTeam:
+          type: integer
+          format: int32
+          nullable: true
+        timesTied:
+          type: integer
+          format: int32
+          nullable: true
+        turnoversTeam:
+          type: integer
+          format: int32
+          nullable: true
+        turnoversTotal:
+          type: integer
+          format: int32
+          nullable: true
+      additionalProperties: false
+    NextGenBoxScoreTeam:
+      type: object
+      properties:
+        teamName:
+          type: string
+          nullable: true
+        teamCity:
+          type: string
+          nullable: true
+        teamTricode:
+          type: string
+          nullable: true
+        teamId:
+          type: integer
+          format: int32
+        players:
+          type: array
+          items:
+            $ref: '#/components/schemas/BoxScorePlayer'
+          nullable: true
+        statistics:
+          $ref: '#/components/schemas/BoxScoreTeamStatistics'
+      additionalProperties: false
+    BoxScoreOfficial:
+      type: object
+      properties:
+        personId:
+          type: integer
+          format: int32
+        name:
+          type: string
+          description: Full name
+          nullable: true
+        nameI:
+          type: string
+          description: First initial, last name
+          nullable: true
+        firstName:
+          type: string
+          nullable: true
+        familyName:
+          type: string
+          nullable: true
+        jerseyNum:
+          type: string
+          nullable: true
+        assignment:
+          type: string
+          nullable: true
+      additionalProperties: false
+    BoxScoreDataModel:
+      type: object
+      properties:
+        gameId:
+          type: string
+          description: >-
+            Format: AABCCDDDDD AA=LeagueID, B=Season Type
+            (1=Pre,2=Reg,3=AllStar,4=Playoff,5=PlayIn), CC=SeasonYear last two
+            digits, DDDDD=game number
+          nullable: true
+        type:
+          type: string
+          nullable: true
+        arena:
+          $ref: '#/components/schemas/BoxScoreArena'
+        gameTimeUTC:
+          type: string
+          format: date-time
+        gameTimeLocal:
+          type: string
+          format: date-time
+        gameTimeHome:
+          type: string
+          format: date-time
+        gameTimeAway:
+          type: string
+          format: date-time
+        regulationPeriods:
+          type: integer
+          format: int32
+          nullable: true
+        attendance:
+          type: integer
+          format: int32
+          nullable: true
+        sellout:
+          type: string
+          nullable: true
+        gameStatus:
+          type: integer
+          description: 1 = Pregame, 2 = Live, 3 = Final
+          format: int32
+        gameStatusText:
+          type: string
+          description: "PreGame (gameStatus = 1):\r\nEST Time of the game for scheduled games.Eg. “9:30 pm ET” \r\nPostponed games: “PPD”\r\nCancelled games: “Cancelled”\r\nForfeited games: “Forfeit”\r\n\r\nLive Game (gameStatus = 2):\r\nDuring play: Quarter and game clock.Eg. “Q1 06:48”\r\nAt end of each quarter: “End Q1”\r\nAt halftime: “Half”\r\nPostponed games: “postponed”\r\nCancelled games: “cancelled”\r\n\r\nPost Game (gameStatus = 3)\r\nEnd of regulation game: “Final” \r\nEnd of overtime game: Single overtime: “Final OT”, Multi-overtime: “Final OT[Num OT Periods]” Eg. “Final OT2”"
+          nullable: true
+        homeTeam:
+          $ref: '#/components/schemas/NextGenBoxScoreTeam'
+        awayTeam:
+          $ref: '#/components/schemas/NextGenBoxScoreTeam'
+        officials:
+          type: array
+          items:
+            $ref: '#/components/schemas/BoxScoreOfficial'
+          nullable: true
+      additionalProperties: false
+    NextGenPlayByPlayAction:
+      type: object
+      properties:
+        actionNumber:
+          type: integer
+          description: Play by play action number
+          format: int32
+        clock:
+          type: string
+          description: 'Format is: PTmmMss.ccS'
+          nullable: true
+        timeActual:
+          type: string
+          description: "The date/time when this action occurred in UTC\r\nFormat is: YYYY-MM-DDTHH:MM:SS.sZ(ISO 8601)"
+          nullable: true
+        period:
+          type: integer
+          format: int32
+        teamId:
+          type: integer
+          format: int32
+          nullable: true
+        teamTricode:
+          type: string
+          nullable: true
+        actionType:
+          type: string
+          description: "Type of action. Use this link from the NGSS software for possible values of actionType, subType, descriptor and qualifier combinations:\r\nhttps://developer.geniussports.com/nbangss/stream/#ActionTypes"
+          nullable: true
+        subType:
+          type: string
+          description: "Sub type providing detail for the action. Use this link from the NGSS software for possible values of actionType, subType, descriptor and qualifier combinations:\r\nhttps://developer.geniussports.com/nbangss/stream/#ActionTypes"
+          nullable: true
+        descriptor:
+          type: string
+          nullable: true
+        qualifiers:
+          type: array
+          items:
+            type: string
+          description: "Qualifiers further describe the action. Use this link from the NGSS software for possible values of actionType, subType, descriptor and qualifier combinations:\r\nhttps://developer.geniussports.com/nbangss/stream/#ActionTypes"
+          nullable: true
+        personId:
+          type: integer
+          format: int32
+          nullable: true
+        playerName:
+          type: string
+          nullable: true
+        playerNameI:
+          type: string
+          nullable: true
+        x:
+          type: number
+          description: >-
+            X coordinate on the court as to where the action occurred. More
+            information for court dimensions from the NGSS system:
+            https://developer.geniussports.com/nbangss/stream/#CourtDefinition
+          format: double
+          nullable: true
+        'y':
+          type: number
+          description: >-
+            Y coordinate on the court as to where the action occurred. More
+            information for court dimensions from the NGSS system:
+            https://developer.geniussports.com/nbangss/stream/#CourtDefinition
+          format: double
+          nullable: true
+        side:
+          type: string
+          nullable: true
+        shotDistance:
+          type: number
+          description: Distance of the shot in feet
+          format: double
+          nullable: true
+        shotResult:
+          type: string
+          description: Made or Missed
+          nullable: true
+        possession:
+          type: integer
+          description: >-
+            The teamId of the team that has offensive possession. If no team has
+            possession then this field should be 0.
+          format: int32
+        isFieldGoal:
+          type: integer
+          description: Flag to indicate if the action is a field goal. True = 1, False = 0
+          format: int32
+        scoreHome:
+          type: string
+          description: The score of the home team after the completion of this action.
+          nullable: true
+        scoreAway:
+          type: string
+          description: The score of the away team after the completion of this action.
+          nullable: true
+        edited:
+          type: string
+          description: >-
+            If the action has been edited (after being initially sent) this
+            field should contain the last time it was edited (in UTC).
+          nullable: true
+        orderNumber:
+          type: integer
+          format: int32
+        pointsTotal:
+          type: integer
+          description: Players total points in the game
+          format: int32
+          nullable: true
+        location:
+          type: string
+          description: >-
+            Indicates home or visitor for the player/team involved in the
+            action. 'h' or 'v'
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        jumpBallRecoveredNameInitial:
+          type: string
+          nullable: true
+        jumpBallRecoveredPersonId:
+          type: integer
+          format: int32
+          nullable: true
+        jumpBallWonPlayerNameI:
+          type: string
+          nullable: true
+        jumpBallWonPersonId:
+          type: integer
+          format: int32
+          nullable: true
+        jumpBallLostPlayerNameI:
+          type: string
+          nullable: true
+        jumpBallLostPersonId:
+          type: integer
+          format: int32
+          nullable: true
+        assistPlayerNameI:
+          type: string
+          nullable: true
+        assistPersonId:
+          type: integer
+          format: int32
+          nullable: true
+        assistTotal:
+          type: integer
+          format: int32
+          nullable: true
+        reboundTotal:
+          type: integer
+          format: int32
+          nullable: true
+        reboundDefensiveTotal:
+          type: integer
+          format: int32
+          nullable: true
+        reboundOffensiveTotal:
+          type: integer
+          format: int32
+          nullable: true
+        turnoverTotal:
+          type: integer
+          format: int32
+          nullable: true
+        stealPlayerNameI:
+          type: string
+          nullable: true
+        stealPersonId:
+          type: integer
+          format: int32
+          nullable: true
+        foulPersonalTotal:
+          type: integer
+          format: int32
+          nullable: true
+        foulTechnicalTotal:
+          type: integer
+          format: int32
+          nullable: true
+        foulDrawnPlayerName:
+          type: string
+          nullable: true
+        foulDrawnPersonId:
+          type: integer
+          format: int32
+          nullable: true
+      additionalProperties: false
+    PlayByPlayDataModel:
+      type: object
+      properties:
+        gameId:
+          type: string
+          nullable: true
+        type:
+          type: string
+          nullable: true
+          readOnly: true
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/NextGenPlayByPlayAction'
+          nullable: true
+      additionalProperties: false
+    GameLeadersPoints:
+      type: object
+      properties:
+        personId:
+          type: integer
+          format: int32
+        name:
+          type: string
+          nullable: true
+        jerseyNum:
+          type: string
+          nullable: true
+        position:
+          type: string
+          description: Points leader's season level position
+          nullable: true
+        points:
+          type: integer
+          format: int32
+      additionalProperties: false
+    GameLeadersAssists:
+      type: object
+      properties:
+        personId:
+          type: integer
+          format: int32
+        name:
+          type: string
+          nullable: true
+        jerseyNum:
+          type: string
+          nullable: true
+        position:
+          type: string
+          description: Assist leader's season level position
+          nullable: true
+        assists:
+          type: integer
+          format: int32
+      additionalProperties: false
+    GameLeadersRebounds:
+      type: object
+      properties:
+        personId:
+          type: integer
+          format: int32
+        name:
+          type: string
+          nullable: true
+        jerseyNum:
+          type: string
+          nullable: true
+        position:
+          type: string
+          description: Rebound leader's season level position
+          nullable: true
+        reboundsTotal:
+          type: integer
+          format: int32
+      additionalProperties: false
+    GameLeaders:
+      type: object
+      properties:
+        points:
+          $ref: '#/components/schemas/GameLeadersPoints'
+        assists:
+          $ref: '#/components/schemas/GameLeadersAssists'
+        reboundsTotal:
+          $ref: '#/components/schemas/GameLeadersRebounds'
+      additionalProperties: false
+    GameLeadersKeyPlayer:
+      type: object
+      properties:
+        personId:
+          type: integer
+          format: int32
+        name:
+          type: string
+          nullable: true
+        jerseyNum:
+          type: string
+          nullable: true
+        position:
+          type: string
+          nullable: true
+        points:
+          type: integer
+          format: int32
+        rebounds:
+          type: integer
+          format: int32
+        assists:
+          type: integer
+          format: int32
+        blocks:
+          type: integer
+          format: int32
+        steals:
+          type: integer
+          format: int32
+      additionalProperties: false
+    GameLeadersTeam:
+      type: object
+      properties:
+        teamId:
+          type: integer
+          format: int32
+        teamName:
+          type: string
+          nullable: true
+        teamCity:
+          type: string
+          nullable: true
+        teamTricode:
+          type: string
+          nullable: true
+        leaders:
+          $ref: '#/components/schemas/GameLeaders'
+        keyPlayer:
+          $ref: '#/components/schemas/GameLeadersKeyPlayer'
+      additionalProperties: false
+    GameLeadersDataModel:
+      type: object
+      properties:
+        gameId:
+          type: string
+          description: >-
+            Format: AABCCDDDDD AA=LeagueID, B=Season Type
+            (1=Pre,2=Reg,3=AllStar,4=Playoff,5=PlayIn), CC=SeasonYear last two
+            digits, DDDDD=game number
+          nullable: true
+        type:
+          type: string
+          description: feed type
+          nullable: true
+        homeTeam:
+          $ref: '#/components/schemas/GameLeadersTeam'
+        awayTeam:
+          $ref: '#/components/schemas/GameLeadersTeam'
+      additionalProperties: false
+    PlayerStatsMeta:
+      type: object
+      properties:
+        version:
+          type: integer
+          format: int32
+        code:
+          type: integer
+          format: int32
+        request:
+          type: string
+          nullable: true
+        time:
+          type: string
+          nullable: true
+      additionalProperties: false
+    PlayerStatsStat:
+      type: object
+      properties:
+        season:
+          type: string
+          description: Season YYYY-YY format
+          nullable: true
+        seasonType:
+          type: string
+          description: >-
+            List of comma separated Season Types. Regular Season|Pre
+            Season|Preseason|Playoffs|All Star|All-Star|The Turn|The
+            Ticket|PlayIn
+          nullable: true
+        gameId:
+          type: string
+          description: Game ID for the game
+          nullable: true
+        teamId:
+          type: integer
+          description: Player's team ID
+          format: int32
+          nullable: true
+        teamName:
+          type: string
+          description: Player's team name
+          nullable: true
+        teamAbbreviation:
+          type: string
+          description: Player's team abbreviation
+          nullable: true
+        gp:
+          type: number
+          description: Games played
+          format: double
+          nullable: true
+        min:
+          type: number
+          description: Minutes
+          format: double
+          nullable: true
+        fgm:
+          type: number
+          description: Field Goals Made
+          format: double
+          nullable: true
+        fga:
+          type: number
+          description: Field Goals Attempted
+          format: double
+          nullable: true
+        fgPct:
+          type: number
+          description: Field Goal%
+          format: double
+          nullable: true
+        fg3m:
+          type: number
+          description: Three pointers made
+          format: double
+          nullable: true
+        fg3a:
+          type: number
+          description: Three pointers attempted
+          format: double
+          nullable: true
+        fg3Pct:
+          type: number
+          description: Three point%
+          format: double
+          nullable: true
+        ftm:
+          type: number
+          description: Free throws made
+          format: double
+          nullable: true
+        fta:
+          type: number
+          description: Free throws attempted
+          format: double
+          nullable: true
+        ftPct:
+          type: number
+          description: Free throw%
+          format: double
+          nullable: true
+        oreb:
+          type: number
+          description: Offensive rebounds
+          format: double
+          nullable: true
+        dreb:
+          type: number
+          description: Defensive rebounds
+          format: double
+          nullable: true
+        reb:
+          type: number
+          description: Total rebounds
+          format: double
+          nullable: true
+        ast:
+          type: number
+          description: Assists
+          format: double
+          nullable: true
+        tov:
+          type: number
+          description: Turnovers
+          format: double
+          nullable: true
+        stl:
+          type: number
+          description: Steals
+          format: double
+          nullable: true
+        blk:
+          type: number
+          description: Blocks
+          format: double
+          nullable: true
+        blka:
+          type: number
+          description: Blocks against
+          format: double
+          nullable: true
+        pf:
+          type: number
+          description: Personal Fouls
+          format: double
+          nullable: true
+        pfd:
+          type: number
+          description: Personal fouls drawn
+          format: double
+          nullable: true
+        pts:
+          type: number
+          description: Points
+          format: double
+          nullable: true
+        plusMinus:
+          type: number
+          description: Plus/Minus
+          format: double
+          nullable: true
+        doubleDouble:
+          type: integer
+          description: Double Double
+          format: int32
+          nullable: true
+        tripleDouble:
+          type: integer
+          description: Triple Double
+          format: int32
+          nullable: true
+        offRating:
+          type: number
+          description: Offensive Rating
+          format: double
+          nullable: true
+        defRating:
+          type: number
+          description: Defensive Rating
+          format: double
+          nullable: true
+        netRating:
+          type: number
+          description: Net Rating
+          format: double
+          nullable: true
+        astPct:
+          type: number
+          description: Assist %
+          format: double
+          nullable: true
+        astTo:
+          type: number
+          description: Assist/Turnover ratio
+          format: double
+          nullable: true
+        astRatio:
+          type: number
+          description: Assist ratio
+          format: double
+          nullable: true
+        stlTo:
+          type: number
+          description: Steal/Turnover ratio
+          format: double
+        orebPct:
+          type: number
+          description: Offensive Rebound %
+          format: double
+          nullable: true
+        drebPct:
+          type: number
+          description: Defensive Rebound %
+          format: double
+          nullable: true
+        rebPct:
+          type: number
+          description: Rebound %
+          format: double
+          nullable: true
+        tmTovPct:
+          type: number
+          description: Team turnover %
+          format: double
+          nullable: true
+        efgPct:
+          type: number
+          description: Effective Field Goal %
+          format: double
+          nullable: true
+        tsPct:
+          type: number
+          description: True Shooting %
+          format: double
+          nullable: true
+        usgPct:
+          type: number
+          description: Usage %
+          format: double
+          nullable: true
+        pace:
+          type: number
+          description: Pace
+          format: double
+          nullable: true
+        pie:
+          type: number
+          description: PIE
+          format: double
+          nullable: true
+        poss:
+          type: number
+          description: Possessions
+          format: double
+          nullable: true
+        ftaRate:
+          type: number
+          description: FTA Rate
+          format: double
+          nullable: true
+        ptsOffTov:
+          type: number
+          description: Points off of turnovers
+          format: double
+          nullable: true
+        pts2ndChance:
+          type: number
+          description: Second chance points
+          format: double
+          nullable: true
+        ptsFb:
+          type: number
+          description: Fast break points
+          format: double
+          nullable: true
+        ptsPaint:
+          type: number
+          description: Points in the paint
+          format: double
+          nullable: true
+        oppPtsOffTov:
+          type: number
+          description: Opponent points off of turnovers
+          format: double
+          nullable: true
+        oppPts2ndChance:
+          type: number
+          description: Opponent second chance points
+          format: double
+          nullable: true
+        oppPtsFb:
+          type: number
+          description: Opponent fast break points
+          format: double
+          nullable: true
+        oppPtsPaint:
+          type: number
+          description: Opponent points in the paint
+          format: double
+          nullable: true
+        oppFgm:
+          type: number
+          description: Opponent FGM
+          format: double
+          nullable: true
+        oppFga:
+          type: number
+          description: Opponent FGA
+          format: double
+          nullable: true
+        oppFgPct:
+          type: number
+          description: Opponent FG%
+          format: double
+          nullable: true
+        oppFg3m:
+          type: number
+          description: Opponent FG3M
+          format: double
+          nullable: true
+        oppFg3a:
+          type: number
+          description: Opponent FG3A
+          format: double
+          nullable: true
+        oppFg3Pct:
+          type: number
+          description: Opponent FG3%
+          format: double
+          nullable: true
+        oppFtm:
+          type: number
+          description: Opponent FTM
+          format: double
+          nullable: true
+        oppFta:
+          type: number
+          description: Opponent FTA
+          format: double
+          nullable: true
+        oppFtPct:
+          type: number
+          description: Opponent FT%
+          format: double
+          nullable: true
+        oppOreb:
+          type: number
+          description: Opponent OREB
+          format: double
+          nullable: true
+        oppDreb:
+          type: number
+          description: Opponent DREB
+          format: double
+          nullable: true
+        oppReb:
+          type: number
+          description: Opponent REB
+          format: double
+          nullable: true
+        oppAst:
+          type: number
+          description: Opponent AST
+          format: double
+          nullable: true
+        oppTov:
+          type: number
+          description: Opponent TOV
+          format: double
+          nullable: true
+        oppStl:
+          type: number
+          description: Opponent STL
+          format: double
+          nullable: true
+        oppBlk:
+          type: number
+          description: Opponent BLK
+          format: double
+          nullable: true
+        oppBlka:
+          type: number
+          description: Opponent BLKA
+          format: double
+          nullable: true
+        oppPf:
+          type: number
+          description: Opponent PF
+          format: double
+          nullable: true
+        oppPfd:
+          type: number
+          description: Opponent PFD
+          format: double
+          nullable: true
+        oppPts:
+          type: number
+          description: Opponent PTS
+          format: double
+          nullable: true
+        oppPlusMinus:
+          type: number
+          description: Opponent Plus Minus
+          format: double
+          nullable: true
+        oppEfgPct:
+          type: number
+          description: Opponent EFG%
+          format: double
+          nullable: true
+        oppFtaRate:
+          type: number
+          description: Opponent FTA Rate
+          format: double
+          nullable: true
+        oppTovPct:
+          type: number
+          description: Opponent TOV %
+          format: double
+          nullable: true
+        oppOrebPct:
+          type: number
+          description: Opponent OREB%
+          format: double
+          nullable: true
+        nbaFantasy:
+          type: number
+          description: Fantasy rating
+          format: double
+          nullable: true
+        pctFga2pt:
+          type: number
+          description: '% of field goal attempts are 2pt'
+          format: double
+          nullable: true
+        pctFga3pt:
+          type: number
+          description: '% of field goal attempts are 3pt'
+          format: double
+          nullable: true
+        pctPts2pt:
+          type: number
+          description: '% of points from 2pt'
+          format: double
+          nullable: true
+        pctPts2ptMr:
+          type: number
+          description: '% of points from 2pt mid-range'
+          format: double
+          nullable: true
+        pctPts3pt:
+          type: number
+          description: '% of points from 3pt'
+          format: double
+          nullable: true
+        pctPtsFb:
+          type: number
+          description: '% of points from fast break'
+          format: double
+          nullable: true
+        pctPtsFt:
+          type: number
+          description: '% of points from free throws'
+          format: double
+          nullable: true
+        pctPtsOffTov:
+          type: number
+          description: '% of points from turnovers'
+          format: double
+          nullable: true
+        pctPtsPaint:
+          type: number
+          description: '% of points from the paint'
+          format: double
+          nullable: true
+        pctAst2pm:
+          type: number
+          description: '% of 2pt made are assisted'
+          format: double
+          nullable: true
+        pctUast2pm:
+          type: number
+          description: '% of 2pt made are unassisted'
+          format: double
+          nullable: true
+        pctAst3pm:
+          type: number
+          description: '% of 3pt made are assisted'
+          format: double
+          nullable: true
+        pctUast3pm:
+          type: number
+          description: '% of 3pt made are unassisted'
+          format: double
+          nullable: true
+        pctAstFgm:
+          type: number
+          description: '% of field goals are assisted'
+          format: double
+          nullable: true
+        pctUastFgm:
+          type: number
+          description: '% of field goals are unassisted'
+          format: double
+          nullable: true
+        pctFgm:
+          type: number
+          description: '% of teams field goals made'
+          format: double
+          nullable: true
+        pctFga:
+          type: number
+          description: '% of teams field goals attempted'
+          format: double
+          nullable: true
+        pctFg3m:
+          type: number
+          description: '% of teams three pointers'
+          format: double
+          nullable: true
+        pctFg3a:
+          type: number
+          description: '% of teams three point attempts'
+          format: double
+          nullable: true
+        pctFtm:
+          type: number
+          description: '% of team free throws'
+          format: double
+          nullable: true
+        pctFta:
+          type: number
+          description: '% of teams free throw attempts'
+          format: double
+          nullable: true
+        pctOreb:
+          type: number
+          description: '% of teams offensive rebounds'
+          format: double
+          nullable: true
+        pctDreb:
+          type: number
+          description: '% of teams defensive rebounds'
+          format: double
+          nullable: true
+        pctReb:
+          type: number
+          description: '% of teams rebounds'
+          format: double
+          nullable: true
+        pctAst:
+          type: number
+          description: '% of teams asssists'
+          format: double
+          nullable: true
+        pctTov:
+          type: number
+          description: '% of teams turnovers'
+          format: double
+          nullable: true
+        pctStl:
+          type: number
+          description: '% of teams steals'
+          format: double
+          nullable: true
+        pctBlk:
+          type: number
+          description: '% of teams blocks'
+          format: double
+          nullable: true
+        pctBlka:
+          type: number
+          description: '% of teams blocks against'
+          format: double
+          nullable: true
+        pctPf:
+          type: number
+          description: '% of teams personal fouls'
+          format: double
+          nullable: true
+        pctPfd:
+          type: number
+          description: '% of teams personal fouls drawn'
+          format: double
+          nullable: true
+        pctPts:
+          type: number
+          description: '% of teams points'
+          format: double
+          nullable: true
+        catchShootFgm:
+          type: number
+          description: Catch and shoot field goals made
+          format: double
+          nullable: true
+        catchShootFga:
+          type: number
+          description: Catch and shoot field goals attempted
+          format: double
+          nullable: true
+        catchShootFgPct:
+          type: number
+          description: Catch and shoot field goal percent
+          format: double
+          nullable: true
+        catchShootPts:
+          type: number
+          description: Catch and shoot points
+          format: double
+          nullable: true
+        catchShootFg3m:
+          type: number
+          description: Catch and shoot three pointers made
+          format: double
+          nullable: true
+        catchShootFg3a:
+          type: number
+          description: Catch and shoot three pointers attempted
+          format: double
+          nullable: true
+        catchShootFg3pct:
+          type: number
+          description: Catch and shoot three point percent
+          format: double
+          nullable: true
+        catchShootEfgPct:
+          type: number
+          description: Catch and shoot effective field goal percent
+          format: double
+          nullable: true
+        defRimFgm:
+          type: number
+          description: Defending the rim opp field goals made
+          format: double
+          nullable: true
+        defRimFga:
+          type: number
+          description: Defending the rim opp field goals attempted
+          format: double
+          nullable: true
+        defRimFgPct:
+          type: number
+          description: Defending the rim opp field goals percent
+          format: double
+          nullable: true
+        drives:
+          type: number
+          description: Drives
+          format: double
+          nullable: true
+        driveFgm:
+          type: number
+          description: Field goals made from drives
+          format: double
+          nullable: true
+        driveFga:
+          type: number
+          description: Field goals attempted from drives
+          format: double
+          nullable: true
+        driveFgPct:
+          type: number
+          description: Field goal percent from drives
+          format: double
+          nullable: true
+        driveFtm:
+          type: number
+          description: Free throws made from drives
+          format: double
+          nullable: true
+        driveFta:
+          type: number
+          description: Free throws attempted from drives
+          format: double
+          nullable: true
+        driveFtPct:
+          type: number
+          description: Free throw percent from drives
+          format: double
+          nullable: true
+        drivePts:
+          type: number
+          description: Points off of drives
+          format: double
+          nullable: true
+        drivePtsPct:
+          type: number
+          description: '% of points from drives'
+          format: double
+          nullable: true
+        drivePasses:
+          type: number
+          description: Passes off of drives
+          format: double
+          nullable: true
+        drivePassesPct:
+          type: number
+          description: '% of passes off of drives'
+          format: double
+          nullable: true
+        driveAst:
+          type: number
+          description: Assists off of drives
+          format: double
+          nullable: true
+        driveAstPct:
+          type: number
+          description: '% of assists from drives'
+          format: double
+          nullable: true
+        driveTov:
+          type: number
+          description: Turnovers off of drives
+          format: double
+          nullable: true
+        driveTovPct:
+          type: number
+          description: '% of turnovers from drives'
+          format: double
+          nullable: true
+        drivePf:
+          type: number
+          description: Fouls off of drives
+          format: double
+          nullable: true
+        drivePfPct:
+          type: number
+          description: '% of fouls off of drives'
+          format: double
+          nullable: true
+        gpRank:
+          type: integer
+          description: Games played Rank
+          format: int32
+        minRank:
+          type: integer
+          description: Minutes Rank
+          format: int32
+        fgmRank:
+          type: integer
+          description: Field Goals Made Rank
+          format: int32
+        fgaRank:
+          type: integer
+          description: Field Goals Attempted Rank
+          format: int32
+        fgPctRank:
+          type: integer
+          description: Field Goal% Rank
+          format: int32
+        fg3mRank:
+          type: integer
+          description: Three pointers made Rank
+          format: int32
+        fg3aRank:
+          type: integer
+          description: Three pointers attempted Rank
+          format: int32
+        fg3PctRank:
+          type: integer
+          description: Three point% Rank
+          format: int32
+        ftmRank:
+          type: integer
+          description: Free throws made Rank
+          format: int32
+        ftaRank:
+          type: integer
+          description: Free throws attempted Rank
+          format: int32
+        ftPctRank:
+          type: integer
+          description: Free throw% Rank
+          format: int32
+        orebRank:
+          type: integer
+          description: Offensive rebounds Rank
+          format: int32
+        drebRank:
+          type: integer
+          description: Defensive rebounds Rank
+          format: int32
+        rebRank:
+          type: integer
+          description: Total rebounds Rank
+          format: int32
+        astRank:
+          type: integer
+          description: Assists Rank
+          format: int32
+        tovRank:
+          type: integer
+          description: Turnovers
+          format: int32
+        stlRank:
+          type: integer
+          description: Steals Rank
+          format: int32
+        blkRank:
+          type: integer
+          description: Blocks Rank
+          format: int32
+        blkaRank:
+          type: integer
+          description: Blocks against Rank
+          format: int32
+        pfRank:
+          type: integer
+          description: Personal Fouls Rank
+          format: int32
+        pfdRank:
+          type: integer
+          description: Personal fouls drawn Rank
+          format: int32
+        ptsRank:
+          type: integer
+          description: Points Rank
+          format: int32
+        plusMinusRank:
+          type: integer
+          description: Plus/Minus Rank
+          format: int32
+        doubleDoubleRank:
+          type: integer
+          description: Double Double Rank
+          format: int32
+        tripleDoubleRank:
+          type: integer
+          description: Triple Double Rank
+          format: int32
+        offRatingRank:
+          type: integer
+          description: Offensive Rating Rank
+          format: int32
+        defRatingRank:
+          type: integer
+          description: Defensive Rating Rank
+          format: int32
+        netRatingRank:
+          type: integer
+          description: Net Rating Rank
+          format: int32
+        astPctRank:
+          type: integer
+          description: Assist % Rank
+          format: int32
+        astToRank:
+          type: integer
+          description: Assist/Turnover ratio Rank
+          format: int32
+        astRatioRank:
+          type: integer
+          description: Assist ratio Rank
+          format: int32
+        stlToRank:
+          type: integer
+          description: Steal/Turnover ratio Rank
+          format: int32
+        orebPctRank:
+          type: integer
+          description: Offensive Rebound % Rank
+          format: int32
+        drebPctRank:
+          type: integer
+          description: Defensive Rebound % Rank
+          format: int32
+        rebPctRank:
+          type: integer
+          description: Rebound % Rank
+          format: int32
+        tmTovPctRank:
+          type: integer
+          description: Team turnover % Rank
+          format: int32
+        efgPctRank:
+          type: integer
+          description: Effective Field Goal % Rank
+          format: int32
+        tsPctRank:
+          type: integer
+          description: True Shooting % Rank
+          format: int32
+        usgPctRank:
+          type: integer
+          description: Usage % Rank
+          format: int32
+        paceRank:
+          type: integer
+          description: Pace Rank
+          format: int32
+        pieRank:
+          type: integer
+          description: PIE Rank
+          format: int32
+        possRank:
+          type: integer
+          description: Possessions Rank
+          format: int32
+        ftaRateRank:
+          type: integer
+          description: FTA Rate Rank
+          format: int32
+        ptsOffTovRank:
+          type: integer
+          description: Points off of turnovers Rank
+          format: int32
+        pts2ndChanceRank:
+          type: integer
+          description: Second chance points Rank
+          format: int32
+        ptsFbRank:
+          type: integer
+          description: Fast break points Rank
+          format: int32
+        ptsPaintRank:
+          type: integer
+          description: Points in the paint Rank
+          format: int32
+        oppPtsOffTovRank:
+          type: integer
+          description: Opponent points off of turnovers Rank
+          format: int32
+        oppPts2ndChanceRank:
+          type: integer
+          description: Opponent second chance points Rank
+          format: int32
+        oppPtsFbRank:
+          type: integer
+          description: Opponent fast break points Rank
+          format: int32
+        oppPtsPaintRank:
+          type: integer
+          description: Opponent points in the paint Rank
+          format: int32
+        oppFgmRank:
+          type: integer
+          description: Opponent FGM Rank
+          format: int32
+        oppFgaRank:
+          type: integer
+          description: Opponent FGA Rank
+          format: int32
+        oppFgPctRank:
+          type: integer
+          description: Opponent FG% Rank
+          format: int32
+        oppFg3mRank:
+          type: integer
+          description: Opponent FG3M Rank
+          format: int32
+        oppFg3aRank:
+          type: integer
+          description: Opponent FG3A Rank
+          format: int32
+        oppFg3PctRank:
+          type: integer
+          description: Opponent FG3% Rank
+          format: int32
+        oppFtmRank:
+          type: integer
+          description: Opponent FTM Rank
+          format: int32
+        oppFtaRank:
+          type: integer
+          description: Opponent FTA Rank
+          format: int32
+        oppFtPctRank:
+          type: integer
+          description: Opponent FT% Rank
+          format: int32
+        oppOrebRank:
+          type: integer
+          description: Opponent OREB Rank
+          format: int32
+        oppDrebRank:
+          type: integer
+          description: Opponent DREB Rank
+          format: int32
+        oppRebRank:
+          type: integer
+          description: Opponent REB Rank
+          format: int32
+        oppAstRank:
+          type: integer
+          description: Opponent AST Rank
+          format: int32
+        oppTovRank:
+          type: integer
+          description: Opponent TOV Rank
+          format: int32
+        oppStlRank:
+          type: integer
+          description: Opponent STL Rank
+          format: int32
+        oppBlkRank:
+          type: integer
+          description: Opponent BLK Rank
+          format: int32
+        oppBlkaRank:
+          type: integer
+          description: Opponent BLKA Rank
+          format: int32
+        oppPfRank:
+          type: integer
+          description: Opponent PF Rank
+          format: int32
+        oppPfdRank:
+          type: integer
+          description: Opponent PFD Rank
+          format: int32
+        oppPtsRank:
+          type: integer
+          description: Opponent PTS Rank
+          format: int32
+        oppPlusMinusRank:
+          type: integer
+          description: Opponent Plus Minus Rank
+          format: int32
+        oppEfgPctRank:
+          type: integer
+          description: Opponent EFG% Rank
+          format: int32
+        oppFtaRateRank:
+          type: integer
+          description: Opponent FTA Rate Rank
+          format: int32
+        oppTovPctRank:
+          type: integer
+          description: Opponent TOV % Rank
+          format: int32
+        oppOrebPctRank:
+          type: integer
+          description: Opponent OREB% Rank
+          format: int32
+        nbaFantasyRank:
+          type: integer
+          description: Fantasy rating Rank
+          format: int32
+        pctFga2ptRank:
+          type: integer
+          description: '% of field goal attempts are 2pt Rank'
+          format: int32
+        pctFga3ptRank:
+          type: integer
+          description: '% of field goal attempts are 3pt Rank'
+          format: int32
+        pctPts2ptRank:
+          type: integer
+          description: '% of points from 2pt Rank'
+          format: int32
+        pctPts2ptMrRank:
+          type: integer
+          description: '% of points from 2pt mid-range Rank'
+          format: int32
+        pctPts3ptRank:
+          type: integer
+          description: '% of points from 3pt Rank'
+          format: int32
+        pctPtsFbRank:
+          type: integer
+          description: '% of points from fast break Rank'
+          format: int32
+        pctPtsFtRank:
+          type: integer
+          description: '% of points from free throws Rank'
+          format: int32
+        pctPtsOffTovRank:
+          type: integer
+          description: '% of points from turnovers Rank'
+          format: int32
+        pctPtsPaintRank:
+          type: integer
+          description: '% of points from the paint Rank'
+          format: int32
+        pctAst2pmRank:
+          type: integer
+          description: '% of 2pt made are assisted Rank'
+          format: int32
+        pctUast2pmRank:
+          type: integer
+          description: '% of 2pt made are unassisted Rank'
+          format: int32
+        pctAst3pmRank:
+          type: integer
+          description: '% of 3pt made are assisted Rank'
+          format: int32
+        pctUast3pmRank:
+          type: integer
+          description: '% of 3pt made are unassisted Rank'
+          format: int32
+        pctAstFgmRank:
+          type: integer
+          description: '% of field goals are assisted Rank'
+          format: int32
+        pctUastFgmRank:
+          type: integer
+          description: '% of field goals are unassisted Rank'
+          format: int32
+        pctFgmRank:
+          type: integer
+          description: '% of teams field goals made Rank'
+          format: int32
+        pctFgaRank:
+          type: integer
+          description: '% of teams field goals attempted Rank'
+          format: int32
+        pctFg3mRank:
+          type: integer
+          description: '% of teams three pointers Rank'
+          format: int32
+        pctFg3aRank:
+          type: integer
+          description: '% of teams three point attempts Rank'
+          format: int32
+        pctFtmRank:
+          type: integer
+          description: '% of team free throws Rank'
+          format: int32
+        pctFtaRank:
+          type: integer
+          description: '% of teams free throw attempts Rank'
+          format: int32
+        pctOrebRank:
+          type: integer
+          description: '% of teams offensive rebounds Rank'
+          format: int32
+        pctDrebRank:
+          type: integer
+          description: '% of teams defensive rebounds Rank'
+          format: int32
+        pctRebRank:
+          type: integer
+          description: '% of teams rebounds Rank'
+          format: int32
+        pctAstRank:
+          type: integer
+          description: "Rank\r\n           % of teams asssists"
+          format: int32
+        pctTovRank:
+          type: integer
+          description: '% of teams turnovers Rank'
+          format: int32
+        pctStlRank:
+          type: integer
+          description: '% of teams steals Rank'
+          format: int32
+        pctBlkRank:
+          type: integer
+          description: '% of teams blocks Rank'
+          format: int32
+        pctBlkaRank:
+          type: integer
+          description: '% of teams blocks against Rank'
+          format: int32
+        pctPfRank:
+          type: integer
+          description: '% of teams personal fouls Rank'
+          format: int32
+        pctPfdRank:
+          type: integer
+          description: '% of teams personal fouls drawn Rank'
+          format: int32
+        pctPtsRank:
+          type: integer
+          description: '% of teams points Rank'
+          format: int32
+        catchShootFgmRank:
+          type: integer
+          description: Catch and shoot field goals made Rank
+          format: int32
+        catchShootFgaRank:
+          type: integer
+          description: Catch and shoot field goals attempted Rank
+          format: int32
+        catchShootFgPctRank:
+          type: integer
+          description: Catch and shoot field goal percent Rank
+          format: int32
+        catchShootPtsRank:
+          type: integer
+          description: Catch and shoot points Rank
+          format: int32
+        catchShootFg3mRank:
+          type: integer
+          description: Catch and shoot three pointers made Rank
+          format: int32
+        catchShootFg3aRank:
+          type: integer
+          description: Catch and shoot three pointers attempted Rank
+          format: int32
+        catchShootFg3pctRank:
+          type: integer
+          description: Catch and shoot three point percent Rank
+          format: int32
+        catchShootEfgPctRank:
+          type: integer
+          description: Catch and shoot effective field goal percent Rank
+          format: int32
+        defRimFgmRank:
+          type: integer
+          description: Defending the rim opp field goals made Rank
+          format: int32
+        defRimFgaRank:
+          type: integer
+          description: Defending the rim opp field goals attempted Rank
+          format: int32
+        defRimFgPctRank:
+          type: integer
+          description: Defending the rim opp field goals percent Rank
+          format: int32
+        drivesRank:
+          type: integer
+          description: Drives
+          format: int32
+        driveFgmRank:
+          type: integer
+          description: Field goals made from drives Rank
+          format: int32
+        driveFgaRank:
+          type: integer
+          description: Field goals attempted from drives Rank
+          format: int32
+        driveFgPctRank:
+          type: integer
+          description: Field goal percent from drives Rank
+          format: int32
+        driveFtmRank:
+          type: integer
+          description: Free throws made from drives Rank
+          format: int32
+        driveFtaRank:
+          type: integer
+          description: Free throws attempted from drives Rank
+          format: int32
+        driveFtPctRank:
+          type: integer
+          description: Free throw percent from drives Rank
+          format: int32
+        drivePtsRank:
+          type: integer
+          description: Points off of drives Rank
+          format: int32
+        drivePtsPctRank:
+          type: integer
+          description: '% of points from drives Rank'
+          format: int32
+        drivePassesRank:
+          type: integer
+          description: Passes off of drives Rank
+          format: int32
+        drivePassesPctRank:
+          type: integer
+          description: '% of passes off of drives Rank'
+          format: int32
+        driveAstRank:
+          type: integer
+          description: Assists off of drives Rank
+          format: int32
+        driveAstPctRank:
+          type: integer
+          description: '% of assists from drives Rank'
+          format: int32
+        driveTovRank:
+          type: integer
+          description: Turnovers off of drives Rank
+          format: int32
+        driveTovPctRank:
+          type: integer
+          description: '% of turnovers from drives Rank'
+          format: int32
+        drivePfRank:
+          type: integer
+          description: Fouls off of drives Rank
+          format: int32
+        drivePfPctRank:
+          type: integer
+          description: '% of fouls off of drives Rank'
+          format: int32
+      additionalProperties: false
+    PlayerStatsPlayer:
+      type: object
+      properties:
+        personId:
+          type: integer
+          description: Person ID
+          format: int32
+        jerseyNum:
+          type: string
+          description: Jersey Number
+          nullable: true
+        position:
+          type: string
+          description: Player season level position
+          nullable: true
+        name:
+          type: string
+          description: Player full display name
+          nullable: true
+        nameI:
+          type: string
+          description: First initial, last name
+          nullable: true
+        stats:
+          $ref: '#/components/schemas/PlayerStatsStat'
+      additionalProperties: false
+    PlayerStatsDataModel:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/PlayerStatsMeta'
+        players:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlayerStatsPlayer'
+          nullable: true
+        perMode:
+          type: string
+          description: >-
+            Per Mode:
+            Totals|PerGame|MinutesPer|Per48|Per40|Per36|PerMinute|PerPossession|PerPlay|Per100Possessions|Per100Plays
+          nullable: true
+      additionalProperties: false
+    PlayerSeasonLeadersMeta:
+      type: object
+      properties:
+        version:
+          type: integer
+          format: int32
+        code:
+          type: integer
+          format: int32
+        request:
+          type: string
+          nullable: true
+        time:
+          type: string
+          nullable: true
+      additionalProperties: false
+    PlayerSeasonLeader:
+      type: object
+      properties:
+        personId:
+          type: integer
+          description: Person ID
+          format: int32
+        jerseyNum:
+          type: string
+          description: Jersey Number
+          nullable: true
+        position:
+          type: string
+          description: Player season level position
+          nullable: true
+        name:
+          type: string
+          description: Player full display name
+          nullable: true
+        nameI:
+          type: string
+          description: First initial, last name
+          nullable: true
+        teamId:
+          type: integer
+          description: Player's team ID
+          format: int32
+        teamName:
+          type: string
+          description: Player's team name
+          nullable: true
+        teamAbbreviation:
+          type: string
+          description: Player's team abbreviation
+          nullable: true
+        rank:
+          type: integer
+          description: Players rank for this stat
+          format: int32
+        gp:
+          type: number
+          description: Games played
+          format: double
+        min:
+          type: number
+          description: Minutes
+          format: double
+        fgm:
+          type: number
+          description: Field Goals Made
+          format: double
+        fga:
+          type: number
+          description: Field Goals Attempted
+          format: double
+        fgPct:
+          type: number
+          description: Field Goal%
+          format: double
+        fg3m:
+          type: number
+          description: Three pointers made
+          format: double
+        fg3a:
+          type: number
+          description: Three pointers attempted
+          format: double
+        fg3Pct:
+          type: number
+          description: Three point%
+          format: double
+        ftm:
+          type: number
+          description: Free throws made
+          format: double
+        fta:
+          type: number
+          description: Free throws attempted
+          format: double
+        ftPct:
+          type: number
+          description: Free throw%
+          format: double
+        oreb:
+          type: number
+          description: Offensive rebounds
+          format: double
+        dreb:
+          type: number
+          description: Defensive rebounds
+          format: double
+        reb:
+          type: number
+          description: Total rebounds
+          format: double
+        ast:
+          type: number
+          description: Assists
+          format: double
+        tov:
+          type: number
+          description: Turnovers
+          format: double
+        stl:
+          type: number
+          description: Steals
+          format: double
+        blk:
+          type: number
+          description: Blocks
+          format: double
+        pts:
+          type: number
+          description: Points
+          format: double
+        eff:
+          type: number
+          description: Efficiency
+          format: double
+      additionalProperties: false
+    PlayerSeasonLeadersDataModel:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/PlayerSeasonLeadersMeta'
+        season:
+          type: string
+          description: Season YYYY-YY format
+          nullable: true
+        seasonType:
+          type: string
+          description: >-
+            List of comma separated Season Types. Regular Season|Pre
+            Season|Preseason|Playoffs|All Star|All-Star|The Turn|The
+            Ticket|PlayIn
+          nullable: true
+        statistic:
+          type: string
+          description: Stat category for these leaders
+          nullable: true
+        scope:
+          type: string
+          description: All Players or Rookie Leaders
+          nullable: true
+        perMode:
+          type: string
+          description: 'Per Mode: Totals|PerGame'
+          nullable: true
+        players:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlayerSeasonLeader'
+          description: Player Leaders
+          nullable: true
+      additionalProperties: false
+    TeamStatsMeta:
+      type: object
+      properties:
+        version:
+          type: integer
+          format: int32
+        code:
+          type: integer
+          format: int32
+        request:
+          type: string
+          nullable: true
+        time:
+          type: string
+          nullable: true
+      additionalProperties: false
+    TeamStatsStat:
+      type: object
+      properties:
+        season:
+          type: string
+          description: Season YYYY-YY format
+          nullable: true
+        seasonType:
+          type: string
+          description: >-
+            List of comma separated Season Types. Regular Season|Pre
+            Season|Preseason|Playoffs|All Star|All-Star|The Turn|The
+            Ticket|PlayIn
+          nullable: true
+        gameId:
+          type: string
+          description: Game ID for the game
+          nullable: true
+        gp:
+          type: number
+          description: Games played
+          format: double
+          nullable: true
+        min:
+          type: number
+          description: Minutes
+          format: double
+          nullable: true
+        fgm:
+          type: number
+          description: Field Goals Made
+          format: double
+          nullable: true
+        fga:
+          type: number
+          description: Field Goals Attempted
+          format: double
+          nullable: true
+        fgPct:
+          type: number
+          description: Field Goal%
+          format: double
+          nullable: true
+        fg3m:
+          type: number
+          description: Three pointers made
+          format: double
+          nullable: true
+        fg3a:
+          type: number
+          description: Three pointers attempted
+          format: double
+          nullable: true
+        fg3Pct:
+          type: number
+          description: Three point%
+          format: double
+          nullable: true
+        ftm:
+          type: number
+          description: Free throws made
+          format: double
+          nullable: true
+        fta:
+          type: number
+          description: Free throws attempted
+          format: double
+          nullable: true
+        ftPct:
+          type: number
+          description: Free throw%
+          format: double
+          nullable: true
+        oreb:
+          type: number
+          description: Offensive rebounds
+          format: double
+          nullable: true
+        dreb:
+          type: number
+          description: Defensive rebounds
+          format: double
+          nullable: true
+        reb:
+          type: number
+          description: Total rebounds
+          format: double
+          nullable: true
+        ast:
+          type: number
+          description: Assists
+          format: double
+          nullable: true
+        tov:
+          type: number
+          description: Turnovers
+          format: double
+          nullable: true
+        stl:
+          type: number
+          description: Steals
+          format: double
+          nullable: true
+        blk:
+          type: number
+          description: Blocks
+          format: double
+          nullable: true
+        blka:
+          type: number
+          description: Blocks against
+          format: double
+          nullable: true
+        pf:
+          type: number
+          description: Personal Fouls
+          format: double
+          nullable: true
+        pfd:
+          type: number
+          description: Personal fouls drawn
+          format: double
+          nullable: true
+        pts:
+          type: number
+          description: Points
+          format: double
+          nullable: true
+        plusMinus:
+          type: number
+          description: Plus/Minus
+          format: double
+          nullable: true
+        offRating:
+          type: number
+          description: Offensive Rating
+          format: double
+          nullable: true
+        defRating:
+          type: number
+          description: Defensive Rating
+          format: double
+          nullable: true
+        netRating:
+          type: number
+          description: Net Rating
+          format: double
+          nullable: true
+        astPct:
+          type: number
+          description: Assist %
+          format: double
+          nullable: true
+        astTo:
+          type: number
+          description: Assist/Turnover ratio
+          format: double
+          nullable: true
+        astRatio:
+          type: number
+          description: Assist ratio
+          format: double
+          nullable: true
+        stlTo:
+          type: number
+          description: Steal/Turnover ratio
+          format: double
+        orebPct:
+          type: number
+          description: Offensive Rebound %
+          format: double
+          nullable: true
+        drebPct:
+          type: number
+          description: Defensive Rebound %
+          format: double
+          nullable: true
+        rebPct:
+          type: number
+          description: Rebound %
+          format: double
+          nullable: true
+        tmTovPct:
+          type: number
+          description: Team turnover %
+          format: double
+          nullable: true
+        efgPct:
+          type: number
+          description: Effective Field Goal %
+          format: double
+          nullable: true
+        tsPct:
+          type: number
+          description: True Shooting %
+          format: double
+          nullable: true
+        usgPct:
+          type: number
+          description: Usage %
+          format: double
+          nullable: true
+        pace:
+          type: number
+          description: Pace
+          format: double
+          nullable: true
+        pie:
+          type: number
+          description: PIE
+          format: double
+          nullable: true
+        poss:
+          type: number
+          description: Possessions
+          format: double
+          nullable: true
+        ptsOffTov:
+          type: number
+          description: Points off of turnovers
+          format: double
+          nullable: true
+        pts2ndChance:
+          type: number
+          description: Second chance points
+          format: double
+          nullable: true
+        ptsFb:
+          type: number
+          description: Fast break points
+          format: double
+          nullable: true
+        ptsPaint:
+          type: number
+          description: Points in the paint
+          format: double
+          nullable: true
+        oppPtsOffTov:
+          type: number
+          description: Opponent points off of turnovers
+          format: double
+          nullable: true
+        oppPts2ndChance:
+          type: number
+          description: Opponent second chance points
+          format: double
+          nullable: true
+        oppPtsFb:
+          type: number
+          description: Opponent fast break points
+          format: double
+          nullable: true
+        oppPtsPaint:
+          type: number
+          description: Opponent points in the paint
+          format: double
+          nullable: true
+        nbaFantasy:
+          type: number
+          description: Fantasy rating
+          format: double
+          nullable: true
+        pctFga2pt:
+          type: number
+          description: '% of field goal attempts are 2pt'
+          format: double
+          nullable: true
+        pctFga3pt:
+          type: number
+          description: '% of field goal attempts are 3pt'
+          format: double
+          nullable: true
+        pctPts2pt:
+          type: number
+          description: '% of points from 2pt'
+          format: double
+          nullable: true
+        pctPts2ptMr:
+          type: number
+          description: '% of points from 2pt mid-range'
+          format: double
+          nullable: true
+        pctPts3pt:
+          type: number
+          description: '% of points from 3pt'
+          format: double
+          nullable: true
+        pctPtsFb:
+          type: number
+          description: '% of points from fast break'
+          format: double
+          nullable: true
+        pctPtsFt:
+          type: number
+          description: '% of points from free throws'
+          format: double
+          nullable: true
+        pctPtsOffTov:
+          type: number
+          description: '% of points from turnovers'
+          format: double
+          nullable: true
+        pctPtsPaint:
+          type: number
+          description: '% of points from the paint'
+          format: double
+          nullable: true
+        pctAst2pm:
+          type: number
+          description: '% of 2pt made are assisted'
+          format: double
+          nullable: true
+        pctUast2pm:
+          type: number
+          description: '% of 2pt made are unassisted'
+          format: double
+          nullable: true
+        pctAst3pm:
+          type: number
+          description: '% of 3pt made are assisted'
+          format: double
+          nullable: true
+        pctUast3pm:
+          type: number
+          description: '% of 3pt made are unassisted'
+          format: double
+          nullable: true
+        pctAstFgm:
+          type: number
+          description: '% of field goals are assisted'
+          format: double
+          nullable: true
+        pctUastFgm:
+          type: number
+          description: '% of field goals are unassisted'
+          format: double
+          nullable: true
+        pctFgm:
+          type: number
+          description: '% of teams field goals made'
+          format: double
+          nullable: true
+        pctFga:
+          type: number
+          description: '% of teams field goals attempted'
+          format: double
+          nullable: true
+        pctFg3m:
+          type: number
+          description: '% of teams three pointers'
+          format: double
+          nullable: true
+        pctFg3a:
+          type: number
+          description: '% of teams three point attempts'
+          format: double
+          nullable: true
+        pctFtm:
+          type: number
+          description: '% of team free throws'
+          format: double
+          nullable: true
+        pctFta:
+          type: number
+          description: '% of teams free throw attempts'
+          format: double
+          nullable: true
+        pctOreb:
+          type: number
+          description: '% of teams offensive rebounds'
+          format: double
+          nullable: true
+        pctDreb:
+          type: number
+          description: '% of teams defensive rebounds'
+          format: double
+          nullable: true
+        pctReb:
+          type: number
+          description: '% of teams rebounds'
+          format: double
+          nullable: true
+        pctAst:
+          type: number
+          description: '% of teams asssists'
+          format: double
+          nullable: true
+        pctTov:
+          type: number
+          description: '% of teams turnovers'
+          format: double
+          nullable: true
+        pctStl:
+          type: number
+          description: '% of teams steals'
+          format: double
+          nullable: true
+        pctBlk:
+          type: number
+          description: '% of teams blocks'
+          format: double
+          nullable: true
+        pctBlka:
+          type: number
+          description: '% of teams blocks against'
+          format: double
+          nullable: true
+        pctPf:
+          type: number
+          description: '% of teams personal fouls'
+          format: double
+          nullable: true
+        pctPfd:
+          type: number
+          description: '% of teams personal fouls drawn'
+          format: double
+          nullable: true
+        pctPts:
+          type: number
+          description: '% of teams points'
+          format: double
+          nullable: true
+        catchShootFgm:
+          type: number
+          description: Catch and shoot field goals made
+          format: double
+          nullable: true
+        catchShootFga:
+          type: number
+          description: Catch and shoot field goals attempted
+          format: double
+          nullable: true
+        catchShootFgPct:
+          type: number
+          description: Catch and shoot field goal percent
+          format: double
+          nullable: true
+        catchShootPts:
+          type: number
+          description: Catch and shoot points
+          format: double
+          nullable: true
+        catchShootFg3m:
+          type: number
+          description: Catch and shoot three pointers made
+          format: double
+          nullable: true
+        catchShootFg3a:
+          type: number
+          description: Catch and shoot three pointers attempted
+          format: double
+          nullable: true
+        catchShootFg3pct:
+          type: number
+          description: Catch and shoot three point percent
+          format: double
+          nullable: true
+        catchShootEfgPct:
+          type: number
+          description: Catch and shoot effective field goal percent
+          format: double
+          nullable: true
+        defRimFgm:
+          type: number
+          description: Defending the rim opp field goals made
+          format: double
+          nullable: true
+        defRimFga:
+          type: number
+          description: Defending the rim opp field goals attempted
+          format: double
+          nullable: true
+        defRimFgPct:
+          type: number
+          description: Defending the rim opp field goals percent
+          format: double
+          nullable: true
+        drives:
+          type: number
+          description: Drives
+          format: double
+          nullable: true
+        driveFgm:
+          type: number
+          description: Field goals made from drives
+          format: double
+          nullable: true
+        driveFga:
+          type: number
+          description: Field goals attempted from drives
+          format: double
+          nullable: true
+        driveFgPct:
+          type: number
+          description: Field goal percent from drives
+          format: double
+          nullable: true
+        driveFtm:
+          type: number
+          description: Free throws made from drives
+          format: double
+          nullable: true
+        driveFta:
+          type: number
+          description: Free throws attempted from drives
+          format: double
+          nullable: true
+        driveFtPct:
+          type: number
+          description: Free throw percent from drives
+          format: double
+          nullable: true
+        drivePts:
+          type: number
+          description: Points off of drives
+          format: double
+          nullable: true
+        drivePtsPct:
+          type: number
+          description: '% of points from drives'
+          format: double
+          nullable: true
+        drivePasses:
+          type: number
+          description: Passes off of drives
+          format: double
+          nullable: true
+        drivePassesPct:
+          type: number
+          description: '% of passes off of drives'
+          format: double
+          nullable: true
+        driveAst:
+          type: number
+          description: Assists off of drives
+          format: double
+          nullable: true
+        driveAstPct:
+          type: number
+          description: '% of assists from drives'
+          format: double
+          nullable: true
+        driveTov:
+          type: number
+          description: Turnovers off of drives
+          format: double
+          nullable: true
+        driveTovPct:
+          type: number
+          description: '% of turnovers from drives'
+          format: double
+          nullable: true
+        drivePf:
+          type: number
+          description: Fouls off of drives
+          format: double
+          nullable: true
+        drivePfPct:
+          type: number
+          description: '% of fouls off of drives'
+          format: double
+          nullable: true
+        gpRank:
+          type: integer
+          description: Games played Rank
+          format: int32
+        minRank:
+          type: integer
+          description: Minutes Rank
+          format: int32
+        fgmRank:
+          type: integer
+          description: Field Goals Made Rank
+          format: int32
+        fgaRank:
+          type: integer
+          description: Field Goals Attempted Rank
+          format: int32
+        fgPctRank:
+          type: integer
+          description: Field Goal% Rank
+          format: int32
+        fg3mRank:
+          type: integer
+          description: Three pointers made Rank
+          format: int32
+        fg3aRank:
+          type: integer
+          description: Three pointers attempted Rank
+          format: int32
+        fg3PctRank:
+          type: integer
+          description: Three point% Rank
+          format: int32
+        ftmRank:
+          type: integer
+          description: Free throws made Rank
+          format: int32
+        ftaRank:
+          type: integer
+          description: Free throws attempted Rank
+          format: int32
+        ftPctRank:
+          type: integer
+          description: Free throw% Rank
+          format: int32
+        orebRank:
+          type: integer
+          description: Offensive rebounds Rank
+          format: int32
+        drebRank:
+          type: integer
+          description: Defensive rebounds Rank
+          format: int32
+        rebRank:
+          type: integer
+          description: Total rebounds Rank
+          format: int32
+        astRank:
+          type: integer
+          description: Assists Rank
+          format: int32
+        tovRank:
+          type: integer
+          description: Turnovers Rank
+          format: int32
+        stlRank:
+          type: integer
+          description: Steals Rank
+          format: int32
+        blkRank:
+          type: integer
+          description: Blocks Rank
+          format: int32
+        blkaRank:
+          type: integer
+          description: Blocks against Rank
+          format: int32
+        pfRank:
+          type: integer
+          description: Personal Fouls Rank
+          format: int32
+        pfdRank:
+          type: integer
+          description: Personal fouls drawn Rank
+          format: int32
+        ptsRank:
+          type: integer
+          description: Points Rank
+          format: int32
+        plusMinusRank:
+          type: integer
+          description: Plus/Minus Rank
+          format: int32
+        offRatingRank:
+          type: integer
+          description: Offensive Rating Rank
+          format: int32
+        defRatingRank:
+          type: integer
+          description: Defensive Rating Rank
+          format: int32
+        netRatingRank:
+          type: integer
+          description: Net Rating Rank
+          format: int32
+        astPctRank:
+          type: integer
+          description: Assist % Rank
+          format: int32
+        astToRank:
+          type: integer
+          description: Assist/Turnover ratio Rank
+          format: int32
+        astRatioRank:
+          type: integer
+          description: Assist ratio Rank
+          format: int32
+        stlToRank:
+          type: integer
+          description: Steal/Turnover ratio Rank
+          format: int32
+        orebPctRank:
+          type: integer
+          description: Offensive Rebound % Rank
+          format: int32
+        drebPctRank:
+          type: integer
+          description: Defensive Rebound % Rank
+          format: int32
+        rebPctRank:
+          type: integer
+          description: Rebound % Rank
+          format: int32
+        tmTovPctRank:
+          type: integer
+          description: Team turnover % Rank
+          format: int32
+        efgPctRank:
+          type: integer
+          description: Effective Field Goal % Rank
+          format: int32
+        tsPctRank:
+          type: integer
+          description: True Shooting % Rank
+          format: int32
+        paceRank:
+          type: integer
+          description: Pace Rank
+          format: int32
+        pieRank:
+          type: integer
+          description: PIE Rank
+          format: int32
+        possRank:
+          type: integer
+          description: Possessions Rank
+          format: int32
+        ftaRateRank:
+          type: integer
+          description: FTA Rate Rank
+          format: int32
+        ptsOffTovRank:
+          type: integer
+          description: Points off of turnovers Rank
+          format: int32
+        pts2ndChanceRank:
+          type: integer
+          description: Second chance points Rank
+          format: int32
+        ptsFbRank:
+          type: integer
+          description: Fast break points Rank
+          format: int32
+        ptsPaintRank:
+          type: integer
+          description: Points in the paint Rank
+          format: int32
+        oppPtsOffTovRank:
+          type: integer
+          description: Opponent points off of turnovers Rank
+          format: int32
+        oppPts2ndChanceRank:
+          type: integer
+          description: Opponent second chance points Rank
+          format: int32
+        oppPtsFbRank:
+          type: integer
+          description: Opponent fast break points Rank
+          format: int32
+        oppPtsPaintRank:
+          type: integer
+          description: Opponent points in the paint Rank
+          format: int32
+        nbaFantasyRank:
+          type: integer
+          description: Fantasy rating Rank
+          format: int32
+        oppFgmRank:
+          type: integer
+          description: Opponent FGM Rank
+          format: int32
+        oppFgaRank:
+          type: integer
+          description: Opponent FGA Rank
+          format: int32
+        oppFgPctRank:
+          type: integer
+          description: Opponent FG% Rank
+          format: int32
+        oppFg3mRank:
+          type: integer
+          description: Opponent FG3M Rank
+          format: int32
+        oppFg3aRank:
+          type: integer
+          description: Opponent FG3A Rank
+          format: int32
+        oppFg3PctRank:
+          type: integer
+          description: Opponent FG3% Rank
+          format: int32
+        oppFtmRank:
+          type: integer
+          description: Opponent FTM Rank
+          format: int32
+        oppFtaRank:
+          type: integer
+          description: Opponent FTA Rank
+          format: int32
+        oppFtPctRank:
+          type: integer
+          description: Opponent FT% Rank
+          format: int32
+        oppOrebRank:
+          type: integer
+          description: Opponent OREB Rank
+          format: int32
+        oppDrebRank:
+          type: integer
+          description: Opponent DREB Rank
+          format: int32
+        oppRebRank:
+          type: integer
+          description: Opponent REB Rank
+          format: int32
+        oppAstRank:
+          type: integer
+          description: Opponent AST Rank
+          format: int32
+        oppTovRank:
+          type: integer
+          description: Opponent TOV Rank
+          format: int32
+        oppStlRank:
+          type: integer
+          description: Opponent STL Rank
+          format: int32
+        oppBlkRank:
+          type: integer
+          description: Opponent BLK Rank
+          format: int32
+        oppBlkaRank:
+          type: integer
+          description: Opponent BLKA Rank
+          format: int32
+        oppPfRank:
+          type: integer
+          description: Opponent PF Rank
+          format: int32
+        oppPfdRank:
+          type: integer
+          description: Opponent PFD Rank
+          format: int32
+        oppPtsRank:
+          type: integer
+          description: Opponent PTS Rank
+          format: int32
+        oppEfgPctRank:
+          type: integer
+          description: Opponent EFG% Rank
+          format: int32
+        oppFtaRateRank:
+          type: integer
+          description: Opponent FTA Rate Rank
+          format: int32
+        oppTovPctRank:
+          type: integer
+          description: Opponent TOV % Rank
+          format: int32
+        oppOrebPctRank:
+          type: integer
+          description: Opponent OREB% Rank
+          format: int32
+        pctFga2ptRank:
+          type: integer
+          description: '% of field goal attempts are 2pt Rank'
+          format: int32
+        pctFga3ptRank:
+          type: integer
+          description: '% of field goal attempts are 3pt Rank'
+          format: int32
+        pctPts2ptRank:
+          type: integer
+          description: '% of points from 2pt Rank'
+          format: int32
+        pctPts2ptMrRank:
+          type: integer
+          description: '% of points from 2pt mid-range Rank'
+          format: int32
+        pctPts3ptRank:
+          type: integer
+          description: '% of points from 3pt Rank'
+          format: int32
+        pctPtsFbRank:
+          type: integer
+          description: '% of points from fast break Rank'
+          format: int32
+        pctPtsFtRank:
+          type: integer
+          description: '% of points from free throws Rank'
+          format: int32
+        pctPtsOffTovRank:
+          type: integer
+          description: '% of points from turnovers Rank'
+          format: int32
+        pctPtsPaintRank:
+          type: integer
+          description: '% of points from the paint Rank'
+          format: int32
+        pctAst2pmRank:
+          type: integer
+          description: '% of 2pt made are assisted Rank'
+          format: int32
+        pctUast2pmRank:
+          type: integer
+          description: '% of 2pt made are unassisted Rank'
+          format: int32
+        pctAst3pmRank:
+          type: integer
+          description: '% of 3pt made are assisted Rank'
+          format: int32
+        pctUast3pmRank:
+          type: integer
+          description: '% of 3pt made are unassisted Rank'
+          format: int32
+        pctAstFgmRank:
+          type: integer
+          description: '% of field goals are assisted Rank'
+          format: int32
+        pctUastFgmRank:
+          type: integer
+          description: '% of field goals are unassisted Rank'
+          format: int32
+        catchShootFgmRank:
+          type: integer
+          description: Catch and shoot field goals made Rank
+          format: int32
+        catchShootFgaRank:
+          type: integer
+          description: Catch and shoot field goals attempted Rank
+          format: int32
+        catchShootFgPctRank:
+          type: integer
+          description: Catch and shoot field goal percent Rank
+          format: int32
+        catchShootPtsRank:
+          type: integer
+          description: Catch and shoot points Rank
+          format: int32
+        catchShootFg3mRank:
+          type: integer
+          description: Catch and shoot three pointers made Rank
+          format: int32
+        catchShootFg3aRank:
+          type: integer
+          description: Catch and shoot three pointers attempted Rank
+          format: int32
+        catchShootFg3pctRank:
+          type: integer
+          description: Catch and shoot three point percent Rank
+          format: int32
+        catchShootEfgPctRank:
+          type: integer
+          description: Catch and shoot effective field goal percent Rank
+          format: int32
+        defRimFgmRank:
+          type: integer
+          description: Defending the rim opp field goals made Rank
+          format: int32
+        defRimFgaRank:
+          type: integer
+          description: Defending the rim opp field goals attempted Rank
+          format: int32
+        defRimFgPctRank:
+          type: integer
+          description: Defending the rim opp field goals percent Rank
+          format: int32
+        drivesRank:
+          type: integer
+          description: Drives Rank
+          format: int32
+        driveFgmRank:
+          type: integer
+          description: Field goals made from drives Rank
+          format: int32
+        driveFgaRank:
+          type: integer
+          description: Field goals attempted from drives Rank
+          format: int32
+        driveFgPctRank:
+          type: integer
+          description: Field goal percent from drives Rank
+          format: int32
+        driveFtmRank:
+          type: integer
+          description: Free throws made from drives Rank
+          format: int32
+        driveFtaRank:
+          type: integer
+          description: Free throws attempted from drives Rank
+          format: int32
+        driveFtPctRank:
+          type: integer
+          description: Free throw percent from drives Rank
+          format: int32
+        drivePtsRank:
+          type: integer
+          description: Points off of drives Rank
+          format: int32
+        drivePtsPctRank:
+          type: integer
+          description: '% of points from drives Rank'
+          format: int32
+        drivePassesRank:
+          type: integer
+          description: Passes off of drives Rank
+          format: int32
+        drivePassesPctRank:
+          type: integer
+          description: '% of passes off of drives Rank'
+          format: int32
+        driveAstRank:
+          type: integer
+          description: Assists off of drives Rank
+          format: int32
+        driveAstPctRank:
+          type: integer
+          description: '% of assists from drives Rank'
+          format: int32
+        driveTovRank:
+          type: integer
+          description: Turnovers off of drives Rank
+          format: int32
+        driveTovPctRank:
+          type: integer
+          description: '% of turnovers from drives Rank'
+          format: int32
+        drivePfRank:
+          type: integer
+          description: Fouls off of drives Rank
+          format: int32
+        drivePfPctRank:
+          type: integer
+          description: '% of fouls off of drives Rank'
+          format: int32
+      additionalProperties: false
+    TeamStatsTeam:
+      type: object
+      properties:
+        teamId:
+          type: integer
+          description: team ID
+          format: int32
+        teamName:
+          type: string
+          description: team name
+          nullable: true
+        teamAbbreviation:
+          type: string
+          description: team abbreviation
+          nullable: true
+        stats:
+          $ref: '#/components/schemas/TeamStatsStat'
+      additionalProperties: false
+    TeamStatsDataModel:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/TeamStatsMeta'
+        teams:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeamStatsTeam'
+          nullable: true
+        perMode:
+          type: string
+          description: >-
+            Per Mode:
+            Totals|PerGame|MinutesPer|Per48|Per40|Per36|PerMinute|PerPossession|PerPlay|Per100Possessions|Per100Plays
+          nullable: true
+      additionalProperties: false
+    PlayerDailyLeader:
+      type: object
+      properties:
+        game_id:
+          type: string
+          description: >-
+            Game ID for this leader. Format: AABCCDDDDD AA=LeagueID, B=Season
+            Type (1=Pre,2=Reg,3=AllStar,4=Playoff,5=PlayIn), CC=SeasonYear last
+            two digits, DDDDD=game number
+          nullable: true
+        player_id:
+          type: integer
+          description: Player ID for this leader
+          format: int32
+        player_name:
+          type: string
+          description: Player full name
+          nullable: true
+        first_name:
+          type: string
+          description: Player's given first name (USE NICKNAME for displays)
+          nullable: true
+        nickname:
+          type: string
+          description: Player Nickname (Use in place of FIRST_NAME)
+          nullable: true
+        last_name:
+          type: string
+          description: Player Last Name
+          nullable: true
+        jersey_num:
+          type: string
+          description: Player's jersey number
+          nullable: true
+        position:
+          type: string
+          description: Player position
+          nullable: true
+        team_id:
+          type: integer
+          description: Team ID this leader is on
+          format: int32
+        team_abbreviation:
+          type: string
+          description: Team Abbreviation for the team
+          nullable: true
+        url_date:
+          type: string
+          description: Date in YYYYMMDD format
+          nullable: true
+        url_teams:
+          type: string
+          description: Two teams abbreviation Away then Home
+          nullable: true
+        ast:
+          type: integer
+          description: >-
+            Contains the assist stat value if the name property is set to "AST",
+            otherwise NULL
+          format: int32
+          nullable: true
+        blk:
+          type: integer
+          description: >-
+            Contains the blocks stat value if the name property is set to "BLK",
+            otherwise NULL
+          format: int32
+          nullable: true
+        nba_fantasy_pts:
+          type: integer
+          description: >-
+            Contains the fantasy points stat value if the name property is set
+            to "NBA_FANTASY_PTS", otherwise NULL
+          format: int32
+          nullable: true
+        fG3M:
+          type: integer
+          description: >-
+            Contains the three pointers stat value if the name property is set
+            to "FG3M", otherwise NULL
+          format: int32
+          nullable: true
+        fG3_PCT:
+          type: integer
+          description: >-
+            Contains the three point % stat value if the name property is set to
+            "FG3_PCT", otherwise NULL
+          format: int32
+          nullable: true
+        fG_PCT:
+          type: integer
+          description: >-
+            Contains the field goal % stat value if the name property is set to
+            "FG_PCT", otherwise NULL
+          format: int32
+          nullable: true
+        ftm:
+          type: integer
+          description: >-
+            Contains the free throws stat value if the name property is set to
+            "FTM", otherwise NULL
+          format: int32
+          nullable: true
+        pts:
+          type: integer
+          description: >-
+            Contains the points stat value if the name property is set to "PTS",
+            otherwise NULL
+          format: int32
+          nullable: true
+        reb:
+          type: integer
+          description: >-
+            Contains the rebounds stat value if the name property is set to
+            "REB", otherwise NULL
+          format: int32
+          nullable: true
+        stl:
+          type: integer
+          description: >-
+            Contains the steals stat value if the name property is set to "STL",
+            otherwise NULL
+          format: int32
+          nullable: true
+        tov:
+          type: integer
+          description: >-
+            Contains the turnovers stat value if the name property is set to
+            "TOV", otherwise NULL
+          format: int32
+          nullable: true
+      additionalProperties: false
+    PlayerDailyLeadersDataModel:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Stat requested matches the stat value field in the playerstats array
+          nullable: true
+        timestamp:
+          type: string
+          description: Timestamp when this leaderboard was generated
+          nullable: true
+        season:
+          type: string
+          description: Season YYYY-YY or YYYY format
+          nullable: true
+        seasontype:
+          type: string
+          description: Season Type for this daily leaderboard
+          nullable: true
+        gamedate:
+          type: string
+          description: >-
+            Date of games to produce leaderboard. Will show last date when games
+            were played until today's games begin
+          nullable: true
+        leagueid:
+          type: string
+          description: League ID
+          nullable: true
+        urldate:
+          type: string
+          description: Game date in YYYYMMDD format
+          nullable: true
+        permode:
+          type: string
+          description: >-
+            Permode for this leaderboard. Will be Totals except for NBA Fantasy
+            Pts.
+          nullable: true
+        playerstats:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlayerDailyLeader'
+          description: Array of top daily leaders for given stat
+          nullable: true
+      additionalProperties: false
+    PlayerHighMeta:
+      type: object
+      properties:
+        version:
+          type: integer
+          format: int32
+        code:
+          type: integer
+          format: int32
+        request:
+          type: string
+          nullable: true
+        time:
+          type: string
+          nullable: true
+      additionalProperties: false
+    PlayerHigh:
+      type: object
+      properties:
+        gameId:
+          type: string
+          description: >-
+            Game ID when the player high was achieved. Format: AABCCDDDDD
+            AA=LeagueID, B=Season Type
+            (1=Pre,2=Reg,3=AllStar,4=Playoff,5=PlayIn), CC=SeasonYear last two
+            digits, DDDDD=game number
+          nullable: true
+        gameDate:
+          type: string
+          description: >-
+            Date of the game when the player high was achieved. MM/DD/YYYY
+            format
+          nullable: true
+        teamId:
+          type: integer
+          description: Team ID of the player's team
+          format: int32
+        teamCity:
+          type: string
+          description: City of the player's team
+          nullable: true
+        teamName:
+          type: string
+          description: Name of the player's team
+          nullable: true
+        teamAbbreviation:
+          type: string
+          description: Tricode abbreviation of the player's team
+          nullable: true
+        vsTeamId:
+          type: integer
+          description: Team ID of the opponent's team
+          format: int32
+        vsTeamCity:
+          type: string
+          description: City of the opponent's team
+          nullable: true
+        vsTeamName:
+          type: string
+          description: Name of the opponent's team
+          nullable: true
+        vsTeamAbbreviation:
+          type: string
+          description: Tricode abbreviation of the opponent's team
+          nullable: true
+        statistic:
+          type: string
+          description: >-
+            the stat category for this player high. Possible values: PTS, REB,
+            OREB, DREB, AST, STL, BLK, FGM, FG3M, FG3A, FTM, FTA
+          nullable: true
+        statValue:
+          type: integer
+          description: The value of the statistic that was achieved.
+          format: int32
+      additionalProperties: false
+    PlayerHighSet:
+      type: object
+      properties:
+        regularSeasonHighs:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlayerHigh'
+          description: Player highs for the Regular Season during the single given season
+          nullable: true
+        playoffSeasonHighs:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlayerHigh'
+          description: Player highs for the Playoffs during the single given season
+          nullable: true
+        regularCareerHighs:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlayerHigh'
+          description: Player highs for the Regular Season for the player's entire career
+          nullable: true
+        playoffCareerHighs:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlayerHigh'
+          description: Player highs for the Playoffs for the player's entire career
+          nullable: true
+      additionalProperties: false
+    PlayerHighsDataModel:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/PlayerHighMeta'
+        playerHighs:
+          $ref: '#/components/schemas/PlayerHighSet'
+        playerId:
+          type: integer
+          format: int32
+        name:
+          type: string
+          description: Player's full name
+          nullable: true
+        nameI:
+          type: string
+          description: Player's first initial and last name
+          nullable: true
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+      additionalProperties: false
+    PlayerIndexMeta:
+      type: object
+      properties:
+        version:
+          type: integer
+          format: int32
+        code:
+          type: integer
+          format: int32
+        request:
+          type: string
+          nullable: true
+        time:
+          type: string
+          nullable: true
+      additionalProperties: false
+    PlayerIndexPlayer:
+      type: object
+      properties:
+        playerId:
+          type: integer
+          description: Unique ID for the player
+          format: int32
+        lastName:
+          type: string
+          nullable: true
+        firstName:
+          type: string
+          nullable: true
+        playerSlug:
+          type: string
+          nullable: true
+        teamId:
+          type: integer
+          format: int32
+        teamCity:
+          type: string
+          nullable: true
+        teamName:
+          type: string
+          nullable: true
+        teamAbbreviation:
+          type: string
+          nullable: true
+        teamIsDefunct:
+          type: integer
+          description: >-
+            Indicates whether the player's associated team is defunct. 0 = No, 1
+            = Yes
+          format: int32
+        jerseyNum:
+          type: string
+          nullable: true
+        position:
+          type: string
+          nullable: true
+        height:
+          type: string
+          nullable: true
+        weight:
+          type: string
+          nullable: true
+        lastAffiliation:
+          type: string
+          description: >-
+            The last school/internation/gleague team the player was affiliated
+            with
+          nullable: true
+        country:
+          type: string
+          description: Home country for the player
+          nullable: true
+        draftYear:
+          type: integer
+          description: If a player was drafted, the year they were drafted
+          format: int32
+          nullable: true
+        draftRound:
+          type: integer
+          description: If a player was drafted, the round in which they were drafted
+          format: int32
+          nullable: true
+        draftNumber:
+          type: integer
+          description: If a player was drafted, the draft number they were drafted
+          format: int32
+          nullable: true
+        rosterStatus:
+          type: integer
+          description: Active roster status. 1 = Active, 2 = Inactive
+          format: int32
+        fromYear:
+          type: integer
+          description: First year the player was in the league
+          format: int32
+        toYear:
+          type: integer
+          description: Most recent year the player was in the league
+          format: int32
+      additionalProperties: false
+    PlayerIndexDataModel:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/PlayerIndexMeta'
+        leagueId:
+          type: string
+          nullable: true
+        season:
+          type: string
+          nullable: true
+        players:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlayerIndexPlayer'
+          nullable: true
+      additionalProperties: false
+    TeamDailyLeader:
+      type: object
+      properties:
+        gamE_ID:
+          type: string
+          description: >-
+            Game ID for this leader. Format: AABCCDDDDD AA=LeagueID, B=Season
+            Type (1=Pre,2=Reg,3=AllStar,4=Playoff,5=PlayIn), CC=SeasonYear last
+            two digits, DDDDD=game number
+          nullable: true
+        teaM_ID:
+          type: integer
+          description: Team ID this leader is on
+          format: int32
+        teaM_ABBREVIATION:
+          type: string
+          description: Team Abbreviation for the team
+          nullable: true
+        urL_DATE:
+          type: string
+          description: Date in YYYYMMDD format
+          nullable: true
+        urL_TEAMS:
+          type: string
+          description: Two teams abbreviation Away then Home
+          nullable: true
+        ast:
+          type: integer
+          description: >-
+            Contains the assist stat value if the name property is set to "AST",
+            otherwise NULL
+          format: int32
+          nullable: true
+        blk:
+          type: integer
+          description: >-
+            Contains the blocks stat value if the name property is set to "BLK",
+            otherwise NULL
+          format: int32
+          nullable: true
+        fG3M:
+          type: integer
+          description: >-
+            Contains the three pointers stat value if the name property is set
+            to "FG3M", otherwise NULL
+          format: int32
+          nullable: true
+        fG3_PCT:
+          type: integer
+          description: >-
+            Contains the three point % stat value if the name property is set to
+            "FG3_PCT", otherwise NULL
+          format: int32
+          nullable: true
+        fG_PCT:
+          type: integer
+          description: >-
+            Contains the field goal % stat value if the name property is set to
+            "FG_PCT", otherwise NULL
+          format: int32
+          nullable: true
+        ftm:
+          type: integer
+          description: >-
+            Contains the free throws stat value if the name property is set to
+            "FTM", otherwise NULL
+          format: int32
+          nullable: true
+        pts:
+          type: integer
+          description: >-
+            Contains the points stat value if the name property is set to "PTS",
+            otherwise NULL
+          format: int32
+          nullable: true
+        reb:
+          type: integer
+          description: >-
+            Contains the rebounds stat value if the name property is set to
+            "REB", otherwise NULL
+          format: int32
+          nullable: true
+        stl:
+          type: integer
+          description: >-
+            Contains the steals stat value if the name property is set to "STL",
+            otherwise NULL
+          format: int32
+          nullable: true
+        tov:
+          type: integer
+          description: >-
+            Contains the turnovers stat value if the name property is set to
+            "TOV", otherwise NULL
+          format: int32
+          nullable: true
+      additionalProperties: false
+    TeamDailyLeadersDataModel:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Stat requested matches the stat value field in the playerstats array
+          nullable: true
+        timestamp:
+          type: string
+          description: Timestamp when this leaderboard was generated
+          nullable: true
+        season:
+          type: string
+          description: Season YYYY-YY or YYYY format
+          nullable: true
+        seasontype:
+          type: string
+          description: Season Type for this daily leaderboard
+          nullable: true
+        gamedate:
+          type: string
+          description: >-
+            Date of games to produce leaderboard. Will show last date when games
+            were played until today's games begin
+          nullable: true
+        leagueid:
+          type: string
+          description: League ID
+          nullable: true
+        urldate:
+          type: string
+          description: Game date in YYYYMMDD format
+          nullable: true
+        permode:
+          type: string
+          description: >-
+            Permode for this leaderboard. Will be Totals except for NBA Fantasy
+            Pts.
+          nullable: true
+        teamstats:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeamDailyLeader'
+          description: Array of top daily leaders for given stat
+          nullable: true
+      additionalProperties: false
+    TeamRostersMeta:
+      type: object
+      properties:
+        version:
+          type: integer
+          format: int32
+        code:
+          type: integer
+          format: int32
+        request:
+          type: string
+          nullable: true
+        time:
+          type: string
+          nullable: true
+      additionalProperties: false
+    TeamRostersPlayer:
+      type: object
+      properties:
+        playerId:
+          type: integer
+          format: int32
+        playerName:
+          type: string
+          nullable: true
+        playerSlug:
+          type: string
+          nullable: true
+        jerseyNum:
+          type: string
+          nullable: true
+        position:
+          type: string
+          nullable: true
+        height:
+          type: string
+          description: FT-IN format
+          nullable: true
+        weight:
+          type: string
+          description: Weight in pounds
+          nullable: true
+        birthdate:
+          type: string
+          description: YYYY-MM-DD format
+          nullable: true
+        age:
+          type: integer
+          format: int32
+          nullable: true
+        seasonExperience:
+          type: string
+          description: Years of playing experience, "R" for rookies
+          nullable: true
+        school:
+          type: string
+          nullable: true
+      additionalProperties: false
+    TeamRostersCoach:
+      type: object
+      properties:
+        coachId:
+          type: integer
+          format: int32
+        coachName:
+          type: string
+          nullable: true
+        isAssistant:
+          type: integer
+          description: 1 = Head Coach, 2 = Assistant, 3= Trainer
+          format: int32
+          nullable: true
+        coachType:
+          type: string
+          description: Description of coach's position
+          nullable: true
+        sortSequence:
+          type: integer
+          description: Sort order for display sorting
+          format: int32
+          nullable: true
+      additionalProperties: false
+    TeamRostersDataModel:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/TeamRostersMeta'
+        leagueId:
+          type: string
+          nullable: true
+        season:
+          type: string
+          nullable: true
+        teamId:
+          type: integer
+          format: int32
+        teamCity:
+          type: string
+          nullable: true
+        teamName:
+          type: string
+          nullable: true
+        teamAbbreviation:
+          type: string
+          nullable: true
+        players:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeamRostersPlayer'
+          description: List of active players on the current roster
+          nullable: true
+        coaches:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeamRostersCoach'
+          description: List of active coaches on the current roster
+          nullable: true
+      additionalProperties: false
+    TeamIndexMeta:
+      type: object
+      properties:
+        version:
+          type: integer
+          format: int32
+        code:
+          type: integer
+          format: int32
+        request:
+          type: string
+          nullable: true
+        time:
+          type: string
+          nullable: true
+      additionalProperties: false
+    TeamIndexTeam:
+      type: object
+      properties:
+        teamId:
+          type: integer
+          description: Unique Team Identifier
+          format: int32
+        teamCity:
+          type: string
+          description: Home city
+          nullable: true
+        teamName:
+          type: string
+          description: Team Nickname
+          nullable: true
+        teamAbbreviation:
+          type: string
+          description: Tricode abbreviation
+          nullable: true
+        conference:
+          type: string
+          description: Conference
+          nullable: true
+        division:
+          type: string
+          description: Division
+          nullable: true
+      additionalProperties: false
+    TeamIndexDataModel:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/TeamIndexMeta'
+        leagueId:
+          type: string
+          nullable: true
+        season:
+          type: string
+          nullable: true
+        seasonType:
+          type: string
+          nullable: true
+        teams:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeamIndexTeam'
+          nullable: true
+      additionalProperties: false
+    InjuryListPlayer:
+      type: object
+      properties:
+        personId:
+          type: integer
+          description: Player's ID
+          format: int32
+        teamId:
+          type: integer
+          description: Player's Team ID. Team ID = 0 for players not on an active roster
+          format: int32
+        teamCity:
+          type: string
+          description: Team City. Empty if player is not on an active roster
+          nullable: true
+        teamName:
+          type: string
+          description: Team Name. Empty if player is not on an active roster
+          nullable: true
+        teamAbbreviation:
+          type: string
+          description: Team Abbreviation. Empty if player is not on an active roster
+          nullable: true
+        firstName:
+          type: string
+          description: First Name
+          nullable: true
+        lastName:
+          type: string
+          description: Last Name
+          nullable: true
+        playerName:
+          type: string
+          description: Player Name
+          nullable: true
+        jerseyNum:
+          type: string
+          description: Players Jersey Number
+          nullable: true
+        injuryStatus:
+          type: string
+          description: Injury status designation
+          nullable: true
+        injuryType:
+          type: string
+          description: Type of injury
+          nullable: true
+        injuryLocation:
+          type: string
+          description: Injry location on the player
+          nullable: true
+        injuryDetails:
+          type: string
+          description: Details of the injury
+          nullable: true
+        injurySide:
+          type: string
+          description: Side of the player
+          nullable: true
+        returnDate:
+          type: string
+          description: Anticipated data of return
+          nullable: true
+      additionalProperties: false
+    InjuryListDataModel:
+      type: object
+      properties:
+        leagueId:
+          type: string
+          nullable: true
+        players:
+          type: array
+          items:
+            $ref: '#/components/schemas/InjuryListPlayer'
+          description: List of players with an injury designation
+          nullable: true
+      additionalProperties: false
