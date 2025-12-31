@@ -19,7 +19,7 @@ def main() -> None:
         print("Missing SLACK_WEBHOOK_URL in environment or .env file.")
         sys.exit(1)
 
-    message = "<https://www.youtube.com/shorts/-KaR2mmifk0?feature=share|You Like that>"
+    message = "<https://youtu.be/IPr0rsRTfMs|Merry Christmas!>"
     if not message:
         print("Please add your message text to the `message` variable before sending.")
         sys.exit(1)

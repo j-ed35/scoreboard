@@ -1,10 +1,13 @@
 """Slack webhook client for posting messages"""
 
+import logging
 from typing import Optional
 
 import requests
 
 from .config import config
+
+logger = logging.getLogger(__name__)
 
 
 class SlackClient:
@@ -20,21 +23,21 @@ class SlackClient:
         Returns True on success, False on failure.
         """
         if not self.webhook_url:
-            print("No Slack webhook URL configured")
+            logger.warning("No Slack webhook URL configured")
             return False
 
         if self.dry_run:
-            print("[DRY RUN] Would post to Slack:")
+            logger.info("[DRY RUN] Would post to Slack:")
             self._print_preview(payload)
             return True
 
         try:
-            response = requests.post(self.webhook_url, json=payload)
+            response = requests.post(self.webhook_url, json=payload, timeout=10)
             response.raise_for_status()
-            print("Posted to Slack successfully")
+            logger.info("Posted to Slack successfully")
             return True
         except requests.RequestException as e:
-            print(f"Error posting to Slack: {e}")
+            logger.error(f"Error posting to Slack: {e}")
             return False
 
     def _print_preview(self, payload: dict) -> None:

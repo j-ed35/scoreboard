@@ -11,14 +11,20 @@ class PlayerStats:
     points: int = 0
     rebounds: int = 0
     assists: int = 0
+    steals: int = 0
+    blocks: int = 0
     three_pointers_made: int = 0
+    three_pointers_attempted: int = 0
     field_goals_made: int = 0
     field_goals_attempted: int = 0
 
     @property
     def is_perfect_shooting(self) -> bool:
         """Check if player is shooting 100% from the field"""
-        return self.field_goals_made > 0 and self.field_goals_made == self.field_goals_attempted
+        return (
+            self.field_goals_made > 0
+            and self.field_goals_made == self.field_goals_attempted
+        )
 
 
 @dataclass
@@ -40,7 +46,10 @@ class Player:
                 points=stats_data.get("points", 0),
                 rebounds=stats_data.get("reboundsTotal", 0),
                 assists=stats_data.get("assists", 0),
+                steals=stats_data.get("steals", 0),
+                blocks=stats_data.get("blocks", 0),
                 three_pointers_made=stats_data.get("threePointersMade", 0),
+                three_pointers_attempted=stats_data.get("threePointersAttempted", 0),
                 field_goals_made=stats_data.get("fieldGoalsMade", 0),
                 field_goals_attempted=stats_data.get("fieldGoalsAttempted", 0),
             ),
@@ -67,6 +76,8 @@ class TeamStats:
     biggest_run: int = 0
     points_in_paint: int = 0
     fast_break_points: int = 0
+    lead_changes: int = 0
+    times_tied: int = 0
 
     @classmethod
     def from_api(cls, data: dict) -> "TeamStats":
@@ -88,6 +99,8 @@ class TeamStats:
             biggest_run=data.get("biggestScoringRun", 0),
             points_in_paint=data.get("pointsInThePaint", 0),
             fast_break_points=data.get("pointsFastBreak", 0),
+            lead_changes=data.get("leadChanges", 0),
+            times_tied=data.get("timesTied", 0),
         )
 
 
@@ -185,6 +198,14 @@ class Game:
         return f"Q{self.period}"
 
 
+QUARTER_LABELS = {1: "End of Q1", 2: "Halftime", 3: "End of Q3", 4: "Final"}
+
+
+def get_quarter_label(quarter: int) -> str:
+    """Get human-readable quarter label"""
+    return QUARTER_LABELS.get(quarter, f"Q{quarter}")
+
+
 @dataclass
 class QuarterUpdate:
     """Represents a quarter-end update to be posted"""
@@ -196,5 +217,74 @@ class QuarterUpdate:
     @property
     def quarter_label(self) -> str:
         """Get human-readable quarter label"""
-        labels = {1: "End of Q1", 2: "Halftime", 3: "End of Q3", 4: "Final"}
-        return labels.get(self.quarter, f"Q{self.quarter}")
+        return get_quarter_label(self.quarter)
+
+
+@dataclass
+class PlayerDailyLeader:
+    """A player's daily leader entry"""
+
+    name: str
+    team_tricode: str
+    value: float
+    stat_type: str
+
+    @classmethod
+    def from_api(cls, data: dict, stat_type: str) -> "PlayerDailyLeader":
+        """Create PlayerDailyLeader from API response"""
+        # API uses UPPERCASE field names
+        name = data.get("PLAYER_NAME", "Unknown")
+        tricode = data.get("TEAM_ABBREVIATION", "???")
+
+        # Get the stat value - API uses UPPERCASE field names
+        stat_key = stat_type.upper()
+        if stat_type == "fgpct":
+            stat_key = "FG_PCT"
+        elif stat_type == "fg3m":
+            stat_key = "FG3M"
+        value = data.get(stat_key, 0) or 0
+
+        return cls(name=name, team_tricode=tricode, value=value, stat_type=stat_type)
+
+    def format_value(self) -> str:
+        """Format the stat value for display"""
+        if self.stat_type == "fgpct":
+            return f"{self.value * 100:.1f}%"
+        elif isinstance(self.value, float) and self.value != int(self.value):
+            return f"{self.value:.1f}"
+        return str(int(self.value))
+
+
+@dataclass
+class TeamDailyLeader:
+    """A team's daily leader entry"""
+
+    name: str
+    tricode: str
+    value: float
+    stat_type: str
+
+    @classmethod
+    def from_api(cls, data: dict, stat_type: str) -> "TeamDailyLeader":
+        """Create TeamDailyLeader from API response"""
+        # API uses UPPERCASE field names
+        name = data.get("TEAM_NAME", "Unknown")
+        tricode = data.get("TEAM_ABBREVIATION", "???")
+
+        # Get the stat value - API uses UPPERCASE field names
+        stat_key = stat_type.upper()
+        if stat_type == "fgpct":
+            stat_key = "FG_PCT"
+        elif stat_type == "fg3pct":
+            stat_key = "FG3_PCT"
+        value = data.get(stat_key, 0) or 0
+
+        return cls(name=name, tricode=tricode, value=value, stat_type=stat_type)
+
+    def format_value(self) -> str:
+        """Format the stat value for display"""
+        if self.stat_type in ("fgpct", "fg3pct"):
+            return f"{self.value * 100:.1f}%"
+        elif isinstance(self.value, float) and self.value != int(self.value):
+            return f"{self.value:.1f}"
+        return str(int(self.value))

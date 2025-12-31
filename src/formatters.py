@@ -1,6 +1,6 @@
 """Slack message formatting using Block Kit"""
 
-from .models import Game, Player, Team, TeamStats
+from .models import Game, Player, Team, TeamStats, get_quarter_label
 
 
 class SlackMessageBuilder:
@@ -23,7 +23,7 @@ class SlackMessageBuilder:
 
     def _build_header(self, game: Game, quarter: int) -> dict:
         """Build the header block with score and quarter"""
-        quarter_label = self._get_quarter_label(quarter)
+        quarter_label = get_quarter_label(quarter)
         home = game.home_team
         away = game.away_team
 
@@ -101,34 +101,43 @@ class SlackMessageBuilder:
 
         line1 = f"  _{stats.field_goals_made}/{stats.field_goals_attempted} {fg_pct}% FG | {stats.three_pointers_made}/{stats.three_pointers_attempted} {three_pct}% 3P | {stats.bench_points} Bench PTS_"
         line2 = f"  _{stats.rebounds} REB | {stats.assists} AST | {stats.steals} STL | {stats.blocks} BLK_"
-        line3 = f"  _Lead {stats.biggest_lead} | Run {stats.biggest_run} | Paint {stats.points_in_paint}_"
+        line3 = f"  _Lead {stats.biggest_lead} | Run {stats.biggest_run} | Paint {stats.points_in_paint} | {stats.lead_changes} Lead Changes | Tied {stats.times_tied}x_"
 
         return f"{line1}\n{line2}\n{line3}"
 
     def _format_player_line(self, player: Player) -> str:
-        """Format a single player's stat line"""
+        """Format a single player's stat line
+
+        Example: Keyonte George - 15 PTS (6-11 FG) | 2 3PM (2-5 3P) | 3 REB | 3 STL | 2 BLK
+        """
         stats = player.stats
-        parts = [f"{stats.points} PTS"]
+        parts = []
 
+        # Points with FG splits
+        pts_str = f"{stats.points} PTS ({stats.field_goals_made}-{stats.field_goals_attempted} FG)"
+        parts.append(pts_str)
+
+        # 3-pointers with splits (only if made any)
         if stats.three_pointers_made > 0:
-            parts.append(f"{stats.three_pointers_made} 3PM")
+            parts.append(f"{stats.three_pointers_made} 3PM ({stats.three_pointers_made}-{stats.three_pointers_attempted} 3P)")
 
-        if stats.is_perfect_shooting:
-            parts.append(f"{stats.field_goals_made}-{stats.field_goals_attempted} FG")
-
+        # Assists (if > 2)
         if stats.assists > 2:
             parts.append(f"{stats.assists} AST")
 
+        # Rebounds (if > 1)
         if stats.rebounds > 1:
             parts.append(f"{stats.rebounds} REB")
 
+        # Steals (if > 2)
+        if stats.steals > 2:
+            parts.append(f"{stats.steals} STL")
+
+        # Blocks (if > 2)
+        if stats.blocks > 2:
+            parts.append(f"{stats.blocks} BLK")
+
         return f"  {player.name} - {' | '.join(parts)}"
-
-    def _get_quarter_label(self, quarter: int) -> str:
-        """Get display label for quarter number"""
-        labels = {1: "End of Q1", 2: "Halftime", 3: "End of Q3", 4: "Final"}
-        return labels.get(quarter, f"Q{quarter}")
-
 
 def format_player_stat_line(player: Player) -> str:
     """Standalone function for formatting player stats (for testing/compatibility)"""

@@ -14,6 +14,7 @@ python main.py --dry-run
 """
 
 import argparse
+import logging
 import signal
 import sys
 import time
@@ -24,6 +25,8 @@ from src.formatters import SlackMessageBuilder
 from src.game_monitor import GameMonitor
 from src.nba_api import NBAApiClient
 from src.slack_client import SlackClient
+
+logger = logging.getLogger(__name__)
 
 
 class QuarterUpdateService:
@@ -38,16 +41,16 @@ class QuarterUpdateService:
 
     def check_games(self) -> None:
         """Check all active games for quarter endings"""
-        print(f"\nChecking games at {datetime.now().strftime('%I:%M:%S %p')}")
+        logger.info(f"Checking games at {datetime.now().strftime('%I:%M:%S %p')}")
 
         games = self.api.get_todays_games()
         active_games = [g for g in games if g.is_active]
 
         if not active_games:
-            print("No active games")
+            logger.info("No active games")
             return
 
-        print(f"Found {len(active_games)} active game(s)")
+        logger.info(f"Found {len(active_games)} active game(s)")
 
         for game in active_games:
             self._process_game(game)
@@ -57,27 +60,27 @@ class QuarterUpdateService:
         away = game.away_team
         home = game.home_team
 
-        print(
-            f"\n  :_{away.tricode}: {away.score} @ {home.score} :_{home.tricode}:  |  {game.game_time_display}"
+        logger.info(
+            f":_{away.tricode}: {away.score} @ {home.score} :_{home.tricode}:  |  {game.game_time_display}"
         )
 
         quarter = self.monitor.detect_quarter_end(game)
 
         if quarter and self.monitor.should_post_update(game.game_id, quarter):
-            print(f"    Quarter {quarter} ended!")
+            logger.info(f"Quarter {quarter} ended!")
 
             if self.api.enrich_game_with_boxscore(game):
                 message = self.formatter.build_quarter_update(game, quarter)
 
                 if self.slack.post_message(message):
                     self.monitor.mark_quarter_posted(game.game_id, quarter)
-                    print(f"    Posted Q{quarter} update")
+                    logger.info(f"Posted Q{quarter} update")
             else:
-                print(f"    Failed to fetch boxscore")
+                logger.warning("Failed to fetch boxscore")
         elif quarter:
-            print(f"    Q{quarter} already posted")
+            logger.debug(f"Q{quarter} already posted")
         else:
-            print(f"    No quarter end detected")
+            logger.debug("No quarter end detected")
 
     def run_once(self) -> None:
         """Run a single check cycle"""
@@ -85,23 +88,23 @@ class QuarterUpdateService:
 
     def run_continuous(self) -> None:
         """Run continuous monitoring until interrupted"""
-        print("=" * 60)
-        print("NBA Quarter-End Monitor Started")
-        print(f"Polling interval: {config.poll_interval_seconds} seconds")
-        print("Press CTRL+C to stop")
-        print("=" * 60)
+        logger.info("=" * 60)
+        logger.info("NBA Quarter-End Monitor Started")
+        logger.info(f"Polling interval: {config.poll_interval_seconds} seconds")
+        logger.info("Press CTRL+C to stop")
+        logger.info("=" * 60)
 
         def signal_handler(sig, frame):
-            print("\n" + "=" * 60)
-            print("Monitor stopped by user")
-            print("=" * 60)
+            logger.info("=" * 60)
+            logger.info("Monitor stopped by user")
+            logger.info("=" * 60)
             self.running = False
 
         signal.signal(signal.SIGINT, signal_handler)
 
         while self.running:
             self.check_games()
-            print(f"\nSleeping for {config.poll_interval_seconds} seconds...")
+            logger.debug(f"Sleeping for {config.poll_interval_seconds} seconds...")
 
             for _ in range(config.poll_interval_seconds):
                 if not self.running:
@@ -121,13 +124,24 @@ def main():
         action="store_true",
         help="Run once and exit instead of continuous monitoring",
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging",
+    )
     args = parser.parse_args()
+
+    logging.basicConfig(
+        level=logging.DEBUG if args.debug else logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        datefmt="%I:%M:%S %p",
+    )
 
     errors = config.validate()
     if errors:
-        print("Configuration errors:")
+        logger.error("Configuration errors:")
         for error in errors:
-            print(f"  - {error}")
+            logger.error(f"  - {error}")
         sys.exit(1)
 
     service = QuarterUpdateService(dry_run=args.dry_run)
