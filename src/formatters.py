@@ -47,7 +47,9 @@ class SlackMessageBuilder:
         home = game.home_team
         away = game.away_team
 
-        quarters_played = min(quarter, len(home.quarter_scores), len(away.quarter_scores))
+        quarters_played = min(
+            quarter, len(home.quarter_scores), len(away.quarter_scores)
+        )
 
         elements = []
 
@@ -66,9 +68,7 @@ class SlackMessageBuilder:
                 label = "H" if q == 1 else f"Q{q + 1}"
                 quarter_parts.append(f"{label}: {away_pts}-{home_pts}")
 
-            elements.append(
-                {"type": "mrkdwn", "text": "  ".join(quarter_parts)}
-            )
+            elements.append({"type": "mrkdwn", "text": "  ".join(quarter_parts)})
             elements.append(
                 {
                     "type": "mrkdwn",
@@ -99,11 +99,12 @@ class SlackMessageBuilder:
         fg_pct = int(stats.field_goal_pct * 100)
         three_pct = int(stats.three_point_pct * 100)
 
-        line1 = f"  _{stats.field_goals_made}/{stats.field_goals_attempted} {fg_pct}% FG | {stats.three_pointers_made}/{stats.three_pointers_attempted} {three_pct}% 3P | {stats.bench_points} Bench PTS_"
-        line2 = f"  _{stats.rebounds} REB | {stats.assists} AST | {stats.steals} STL | {stats.blocks} BLK_"
-        line3 = f"  _Lead {stats.biggest_lead} | Run {stats.biggest_run} | Paint {stats.points_in_paint} | {stats.lead_changes} Lead Changes | Tied {stats.times_tied}x_"
+        line1 = f" {stats.field_goals_made}/{stats.field_goals_attempted} {fg_pct}% FG | {stats.three_pointers_made}/{stats.three_pointers_attempted} {three_pct}% 3P"
+        line2 = f" {stats.rebounds} REB | {stats.assists} AST | {stats.steals} STL | {stats.blocks} BLK"
+        line3 = f"Bench: {stats.bench_points} | Paint: {stats.points_in_paint} | 2ndPTS: {stats.points_second_chance} | PTSTO: {stats.points_from_turnovers}"
+        line4 = f" Lead: {stats.biggest_lead} | Run: {stats.biggest_run}"
 
-        return f"{line1}\n{line2}\n{line3}"
+        return f"{line1}\n{line2}\n{line3}\n{line4}"
 
     def _format_player_line(self, player: Player) -> str:
         """Format a single player's stat line
@@ -119,7 +120,9 @@ class SlackMessageBuilder:
 
         # 3-pointers with splits (only if made any)
         if stats.three_pointers_made > 0:
-            parts.append(f"{stats.three_pointers_made} 3PM ({stats.three_pointers_made}-{stats.three_pointers_attempted} 3P)")
+            parts.append(
+                f"{stats.three_pointers_made} 3PM ({stats.three_pointers_made}-{stats.three_pointers_attempted} 3P)"
+            )
 
         # Assists (if > 2)
         if stats.assists > 2:
@@ -137,7 +140,8 @@ class SlackMessageBuilder:
         if stats.blocks > 2:
             parts.append(f"{stats.blocks} BLK")
 
-        return f"  {player.name} - {' | '.join(parts)}"
+        return f"{player.name} - {' | '.join(parts)}"
+
 
 def format_player_stat_line(player: Player) -> str:
     """Standalone function for formatting player stats (for testing/compatibility)"""

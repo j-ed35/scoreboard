@@ -1,11 +1,14 @@
 """
-NBA Game Summary - Posts current status of all games to Slack
+NBA Game Summary for Specific Games - Posts current status of selected games to Slack
 
 # Dry run (preview)
-python summary.py --dry-run
+python game_summary.py --teams LAL GSW --dry-run
 
 # Post to Slack
-python summary.py
+python game_summary.py --teams LAL GSW
+
+# Multiple teams (shows games involving any of these teams)
+python game_summary.py --teams LAL GSW BOS MIA --dry-run
 
 """
 
@@ -25,13 +28,14 @@ logger = logging.getLogger(__name__)
 class GameSummaryService:
     """Service for posting game summaries to Slack"""
 
-    def __init__(self, dry_run: bool = False):
+    def __init__(self, dry_run: bool = False, team_filter: list[str] | None = None):
         self.api = NBAApiClient()
         self.formatter = SlackMessageBuilder()
         self.slack = SlackClient(dry_run=dry_run)
+        self.team_filter = [t.upper() for t in team_filter] if team_filter else None
 
     def post_summary(self) -> None:
-        """Fetch all active/completed games and post summary to Slack"""
+        """Fetch filtered games and post summary to Slack"""
         games = self.api.get_todays_games()
         active_games = [g for g in games if g.is_active]
 
@@ -39,7 +43,21 @@ class GameSummaryService:
             logger.info("No active or completed games found")
             return
 
-        logger.info(f"Found {len(active_games)} game(s)")
+        # Filter games by team if specified
+        if self.team_filter:
+            filtered_games = [
+                g for g in active_games
+                if g.away_team.tricode in self.team_filter or g.home_team.tricode in self.team_filter
+            ]
+
+            if not filtered_games:
+                logger.info(f"No games found for teams: {', '.join(self.team_filter)}")
+                return
+
+            active_games = filtered_games
+            logger.info(f"Found {len(active_games)} game(s) matching teams: {', '.join(self.team_filter)}")
+        else:
+            logger.info(f"Found {len(active_games)} game(s)")
 
         # Enrich all games with boxscore data
         for game in active_games:
@@ -99,12 +117,16 @@ class GameSummaryService:
         blocks = []
 
         # Header
+        header_text = "NBA Scoreboard"
+        if self.team_filter:
+            header_text += f" - {', '.join(self.team_filter)}"
+
         blocks.append(
             {
                 "type": "header",
                 "text": {
                     "type": "plain_text",
-                    "text": "NBA Scoreboard",
+                    "text": header_text,
                     "emoji": True,
                 },
             }
@@ -216,7 +238,12 @@ class GameSummaryService:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="NBA Game Summary - Post all games to Slack"
+        description="NBA Game Summary - Post specific games to Slack"
+    )
+    parser.add_argument(
+        "--teams",
+        nargs="+",
+        help="Team tricodes to filter (e.g., LAL GSW BOS). Shows games involving any of these teams.",
     )
     parser.add_argument(
         "--dry-run",
@@ -236,6 +263,11 @@ def main():
         datefmt="%I:%M:%S %p",
     )
 
+    if not args.teams:
+        logger.error("Please specify at least one team using --teams")
+        parser.print_help()
+        sys.exit(1)
+
     errors = config.validate()
     if errors:
         logger.error("Configuration errors:")
@@ -243,7 +275,7 @@ def main():
             logger.error(f"  - {error}")
         sys.exit(1)
 
-    service = GameSummaryService(dry_run=args.dry_run)
+    service = GameSummaryService(dry_run=args.dry_run, team_filter=args.teams)
     service.post_summary()
 
 

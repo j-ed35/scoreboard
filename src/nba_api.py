@@ -2,7 +2,7 @@
 
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import sleep
 from typing import Optional
 
@@ -76,7 +76,12 @@ class NBAApiClient:
         return None
 
     def get_todays_games(self) -> list[Game]:
-        """Fetch today's NBA games from the rolling schedule endpoint"""
+        """Fetch today's NBA games from the rolling schedule endpoint
+
+        Returns games from today and yesterday (to handle games that cross midnight).
+        This ensures games that started late yesterday evening are still tracked
+        after midnight without including old games from many days ago.
+        """
         url = f"{self.base_url}/api/schedule/rolling"
         headers = {"X-NBA-Api-Key": self.schedule_api_key}
         params = {"leagueId": "00", "gameDate": "TODAY"}
@@ -88,13 +93,22 @@ class NBAApiClient:
         rolling_schedule = data.get("rollingSchedule", {})
         game_dates = rolling_schedule.get("gameDates", [])
 
-        today = datetime.now().strftime("%m/%d/%Y")
-        for game_date in game_dates:
-            if game_date.get("gameDate", "").startswith(today):
-                games_data = game_date.get("games", [])
-                return [Game.from_schedule_api(g) for g in games_data]
+        # Get date strings for today and yesterday
+        now = datetime.now()
+        today = now.strftime("%m/%d/%Y")
+        yesterday = (now - timedelta(days=1)).strftime("%m/%d/%Y")
+        valid_dates = {today, yesterday}
 
-        return []
+        # Collect games only from today and yesterday
+        all_games = []
+        for game_date in game_dates:
+            date_str = game_date.get("gameDate", "")
+            # Check if date starts with today or yesterday
+            if any(date_str.startswith(valid_date) for valid_date in valid_dates):
+                games_data = game_date.get("games", [])
+                all_games.extend([Game.from_schedule_api(g) for g in games_data])
+
+        return all_games
 
     def get_boxscore(self, game_id: str) -> Optional[dict]:
         """Fetch raw boxscore data for a specific game"""

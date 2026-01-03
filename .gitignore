@@ -6,3 +6,5 @@ docs/
 archive/
 .claude/
 .DS_Store
+
+tests/

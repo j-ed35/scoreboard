@@ -76,6 +76,8 @@ class TeamStats:
     biggest_run: int = 0
     points_in_paint: int = 0
     fast_break_points: int = 0
+    points_second_chance: int = 0
+    points_from_turnovers: int = 0
     lead_changes: int = 0
     times_tied: int = 0
 
@@ -89,7 +91,7 @@ class TeamStats:
             three_pointers_made=data.get("threePointersMade", 0),
             three_pointers_attempted=data.get("threePointersAttempted", 0),
             three_point_pct=data.get("threePointersPercentage", 0.0),
-            rebounds=data.get("reboundsTotal", 0),
+            rebounds=data.get("reboundsPersonal", 0),
             assists=data.get("assists", 0),
             steals=data.get("steals", 0),
             blocks=data.get("blocks", 0),
@@ -99,6 +101,8 @@ class TeamStats:
             biggest_run=data.get("biggestScoringRun", 0),
             points_in_paint=data.get("pointsInThePaint", 0),
             fast_break_points=data.get("pointsFastBreak", 0),
+            points_second_chance=data.get("pointsSecondChance", 0),
+            points_from_turnovers=data.get("pointsFromTurnovers", 0),
             lead_changes=data.get("leadChanges", 0),
             times_tied=data.get("timesTied", 0),
         )
