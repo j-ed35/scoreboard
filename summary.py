@@ -12,6 +12,7 @@ python summary.py
 import argparse
 import logging
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from src.config import config
 from src.formatters import SlackMessageBuilder
@@ -41,53 +42,64 @@ class GameSummaryService:
 
         logger.info(f"Found {len(active_games)} game(s)")
 
-        # Enrich all games with boxscore data
-        for game in active_games:
-            self.api.enrich_game_with_boxscore(game)
+        # Fetch all data concurrently: boxscores + player leaders + team leaders
+        player_stats = ["pts", "reb", "ast", "fg3m", "fgpct"]
+        team_stats = ["pts", "ast", "fgpct", "fg3pct"]
 
-        # Fetch daily leaders
-        player_leaders = self._fetch_player_leaders()
-        team_leaders = self._fetch_team_leaders()
+        with ThreadPoolExecutor(max_workers=len(active_games) + len(player_stats) + len(team_stats)) as executor:
+            # Submit all boxscore enrichments
+            boxscore_futures = {
+                executor.submit(self.api.enrich_game_with_boxscore, game): game
+                for game in active_games
+            }
+
+            # Submit all player leader requests
+            player_leader_futures = {
+                executor.submit(self.api.get_player_daily_leaders, stat): stat
+                for stat in player_stats
+            }
+
+            # Submit all team leader requests
+            team_leader_futures = {
+                executor.submit(self.api.get_team_daily_leaders, stat): stat
+                for stat in team_stats
+            }
+
+            # Wait for boxscores to complete
+            for future in as_completed(boxscore_futures):
+                future.result()  # Raises exception if any failed
+
+            # Collect player leaders
+            player_leaders = {}
+            for future in as_completed(player_leader_futures):
+                stat = player_leader_futures[future]
+                data = future.result()
+                if data and "playerstats" in data:
+                    player_leaders[stat] = [
+                        PlayerDailyLeader.from_api(p, stat)
+                        for p in data["playerstats"][:3]
+                    ]
+                else:
+                    player_leaders[stat] = []
+
+            # Collect team leaders
+            team_leaders = {}
+            for future in as_completed(team_leader_futures):
+                stat = team_leader_futures[future]
+                data = future.result()
+                if data and "teamstats" in data:
+                    team_leaders[stat] = [
+                        TeamDailyLeader.from_api(t, stat)
+                        for t in data["teamstats"][:3]
+                    ]
+                else:
+                    team_leaders[stat] = []
 
         # Build the summary message
         message = self._build_summary_message(active_games, player_leaders, team_leaders)
 
         # Post to Slack
         self.slack.post_message(message)
-
-    def _fetch_player_leaders(self) -> dict[str, list[PlayerDailyLeader]]:
-        """Fetch top 3 player leaders for pts, reb, ast, fg3m, fgpct"""
-        stats = ["pts", "reb", "ast", "fg3m", "fgpct"]
-        leaders = {}
-
-        for stat in stats:
-            data = self.api.get_player_daily_leaders(stat)
-            if data and "playerstats" in data:
-                leaders[stat] = [
-                    PlayerDailyLeader.from_api(p, stat)
-                    for p in data["playerstats"][:3]
-                ]
-            else:
-                leaders[stat] = []
-
-        return leaders
-
-    def _fetch_team_leaders(self) -> dict[str, list[TeamDailyLeader]]:
-        """Fetch top 3 team leaders for pts, ast, fgpct, fg3pct"""
-        stats = ["pts", "ast", "fgpct", "fg3pct"]
-        leaders = {}
-
-        for stat in stats:
-            data = self.api.get_team_daily_leaders(stat)
-            if data and "teamstats" in data:
-                leaders[stat] = [
-                    TeamDailyLeader.from_api(t, stat)
-                    for t in data["teamstats"][:3]
-                ]
-            else:
-                leaders[stat] = []
-
-        return leaders
 
     def _build_summary_message(
         self,

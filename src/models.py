@@ -1,10 +1,11 @@
 """Data models for NBA game tracking"""
 
+import heapq
 from dataclasses import dataclass, field
 from typing import Optional
 
 
-@dataclass
+@dataclass(slots=True)
 class PlayerStats:
     """Player statistics for a game"""
 
@@ -27,7 +28,7 @@ class PlayerStats:
         )
 
 
-@dataclass
+@dataclass(slots=True)
 class Player:
     """NBA player with game statistics"""
 
@@ -56,7 +57,7 @@ class Player:
         )
 
 
-@dataclass
+@dataclass(slots=True)
 class TeamStats:
     """Team statistics for a game"""
 
@@ -108,7 +109,7 @@ class TeamStats:
         )
 
 
-@dataclass
+@dataclass(slots=True)
 class Team:
     """NBA team with game data"""
 
@@ -130,18 +131,20 @@ class Team:
 
     def get_top_performers(self, count: int = 2) -> list[Player]:
         """Get top performers by points, with PTS+REB+AST as tiebreaker"""
-        active = [p for p in self.players if p.played]
-        return sorted(
+        # Use generator to avoid creating intermediate list
+        active = (p for p in self.players if p.played)
+        # heapq.nlargest is more efficient than full sort when count << len(players)
+        return heapq.nlargest(
+            count,
             active,
             key=lambda p: (
                 p.stats.points,
                 p.stats.points + p.stats.rebounds + p.stats.assists,
             ),
-            reverse=True,
-        )[:count]
+        )
 
 
-@dataclass
+@dataclass(slots=True)
 class Game:
     """NBA game with current state"""
 
@@ -152,9 +155,10 @@ class Game:
     status_text: str
     period: int = 0
     clock: str = ""
+    game_date: str = ""  # Date string from API (e.g., "01/09/2025")
 
     @classmethod
-    def from_schedule_api(cls, data: dict) -> "Game":
+    def from_schedule_api(cls, data: dict, game_date: str = "") -> "Game":
         """Create Game from schedule API response"""
         return cls(
             game_id=data.get("gameId", ""),
@@ -164,6 +168,7 @@ class Game:
             status_text=data.get("gameStatusText", "").strip(),
             period=data.get("period", 0),
             clock=data.get("clock", "").strip(),
+            game_date=game_date,
         )
 
     @property
@@ -210,7 +215,7 @@ def get_quarter_label(quarter: int) -> str:
     return QUARTER_LABELS.get(quarter, f"Q{quarter}")
 
 
-@dataclass
+@dataclass(slots=True)
 class QuarterUpdate:
     """Represents a quarter-end update to be posted"""
 
@@ -224,7 +229,7 @@ class QuarterUpdate:
         return get_quarter_label(self.quarter)
 
 
-@dataclass
+@dataclass(slots=True)
 class PlayerDailyLeader:
     """A player's daily leader entry"""
 
@@ -259,7 +264,7 @@ class PlayerDailyLeader:
         return str(int(self.value))
 
 
-@dataclass
+@dataclass(slots=True)
 class TeamDailyLeader:
     """A team's daily leader entry"""
 

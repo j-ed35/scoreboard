@@ -3,6 +3,7 @@
 import logging
 import re
 from datetime import datetime, timedelta
+from functools import lru_cache
 from time import sleep
 from typing import Optional
 
@@ -12,6 +13,9 @@ from .config import config
 from .models import Game, Player, TeamStats
 
 logger = logging.getLogger(__name__)
+
+# Pre-compiled regex for ISO 8601 duration parsing (avoids recompilation per call)
+_DURATION_PATTERN = re.compile(r'PT(?:(\d+)M)?(\d+(?:\.\d+)?)?S?')
 
 
 def parse_iso_duration_to_clock(duration: str) -> str:
@@ -32,9 +36,8 @@ def parse_iso_duration_to_clock(duration: str) -> str:
     if not duration:
         return ""
 
-    # Match pattern: PT followed by optional minutes and seconds
-    # PTmmMss.ccS or PTmmMssS or PTssS
-    match = re.match(r'PT(?:(\d+)M)?(\d+(?:\.\d+)?)?S?', duration)
+    # Use pre-compiled pattern for better performance
+    match = _DURATION_PATTERN.match(duration)
     if not match:
         return ""
 
@@ -55,13 +58,28 @@ class NBAApiClient:
         self.schedule_api_key = config.schedule_api_key
         self.stats_api_key = config.stats_api_key
 
+        # Configure session with connection pooling for better performance
+        self.session = requests.Session()
+        adapter = requests.adapters.HTTPAdapter(
+            pool_connections=10,  # Number of connection pools to cache
+            pool_maxsize=20,      # Max connections per pool
+            max_retries=0,        # We handle retries ourselves
+        )
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
+
+        # Cache for boxscore data (game_id -> data, timestamp)
+        # Helps avoid duplicate API calls within the same polling cycle
+        self._boxscore_cache: dict[str, tuple[dict, float]] = {}
+        self._cache_ttl = 30  # seconds
+
     def _request_with_retry(
         self, url: str, headers: dict, params: dict
     ) -> Optional[dict]:
         """Make HTTP request with retry logic and exponential backoff"""
         for attempt in range(self.MAX_RETRIES):
             try:
-                response = requests.get(
+                response = self.session.get(
                     url, headers=headers, params=params, timeout=self.REQUEST_TIMEOUT
                 )
                 response.raise_for_status()
@@ -79,8 +97,8 @@ class NBAApiClient:
         """Fetch today's NBA games from the rolling schedule endpoint
 
         Returns games from today and yesterday (to handle games that cross midnight).
-        This ensures games that started late yesterday evening are still tracked
-        after midnight without including old games from many days ago.
+        Yesterday's games are only included if they are still in progress (status=2),
+        to avoid re-posting finals for completed games from the previous day.
         """
         url = f"{self.base_url}/api/schedule/rolling"
         headers = {"X-NBA-Api-Key": self.schedule_api_key}
@@ -97,26 +115,92 @@ class NBAApiClient:
         now = datetime.now()
         today = now.strftime("%m/%d/%Y")
         yesterday = (now - timedelta(days=1)).strftime("%m/%d/%Y")
-        valid_dates = {today, yesterday}
 
-        # Collect games only from today and yesterday
         all_games = []
         for game_date in game_dates:
             date_str = game_date.get("gameDate", "")
-            # Check if date starts with today or yesterday
-            if any(date_str.startswith(valid_date) for valid_date in valid_dates):
-                games_data = game_date.get("games", [])
-                all_games.extend([Game.from_schedule_api(g) for g in games_data])
+            games_data = game_date.get("games", [])
+
+            if date_str.startswith(today):
+                # Include all of today's games
+                all_games.extend([
+                    Game.from_schedule_api(g, game_date=today)
+                    for g in games_data
+                ])
+            elif date_str.startswith(yesterday):
+                # Only include yesterday's games that are still in progress
+                # This handles games that crossed midnight
+                for g in games_data:
+                    if g.get("gameStatus") == 2:  # In progress
+                        all_games.append(Game.from_schedule_api(g, game_date=yesterday))
+
+        return all_games
+
+    def get_yesterdays_games(self) -> list[Game]:
+        """Fetch yesterday's completed NBA games
+
+        Returns all games from the previous day that have finished (status=3).
+        Useful for daily recaps and morning summaries.
+
+        Note: The rolling schedule API only accepts 'TODAY' as gameDate,
+        so we fetch today's rolling window and filter for yesterday's completed games.
+        """
+        url = f"{self.base_url}/api/schedule/rolling"
+        headers = {"X-NBA-Api-Key": self.schedule_api_key}
+        params = {"leagueId": "00", "gameDate": "TODAY"}
+
+        data = self._request_with_retry(url, headers, params)
+        if not data:
+            return []
+
+        rolling_schedule = data.get("rollingSchedule", {})
+        game_dates = rolling_schedule.get("gameDates", [])
+
+        # Get yesterday's date string for matching
+        yesterday = (datetime.now() - timedelta(days=1)).strftime("%m/%d/%Y")
+
+        all_games = []
+        for game_date in game_dates:
+            date_str = game_date.get("gameDate", "")
+            games_data = game_date.get("games", [])
+
+            # Match yesterday's date and only include finished games
+            if date_str.startswith(yesterday):
+                all_games.extend([
+                    Game.from_schedule_api(g, game_date=yesterday)
+                    for g in games_data
+                    if g.get("gameStatus") == 3  # Finished games only
+                ])
 
         return all_games
 
     def get_boxscore(self, game_id: str) -> Optional[dict]:
-        """Fetch raw boxscore data for a specific game"""
+        """Fetch raw boxscore data for a specific game (with caching)"""
+        import time
+
+        # Check cache first
+        if game_id in self._boxscore_cache:
+            data, timestamp = self._boxscore_cache[game_id]
+            if time.time() - timestamp < self._cache_ttl:
+                logger.debug(f"Using cached boxscore for game {game_id}")
+                return data
+
+        # Cache miss or expired, fetch from API
         url = f"{self.base_url}/api/stats/boxscore"
         headers = {"X-NBA-Api-Key": self.stats_api_key}
         params = {"gameId": game_id, "measureType": "Traditional"}
 
-        return self._request_with_retry(url, headers, params)
+        data = self._request_with_retry(url, headers, params)
+
+        # Cache the result if successful
+        if data:
+            self._boxscore_cache[game_id] = (data, time.time())
+
+        return data
+
+    def clear_cache(self) -> None:
+        """Clear the boxscore cache (useful for testing or forcing refresh)"""
+        self._boxscore_cache.clear()
 
     def enrich_game_with_boxscore(self, game: Game) -> bool:
         """Enrich a Game object with player data from boxscore API"""
