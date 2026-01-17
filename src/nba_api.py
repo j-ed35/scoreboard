@@ -68,11 +68,6 @@ class NBAApiClient:
         self.session.mount("https://", adapter)
         self.session.mount("http://", adapter)
 
-        # Cache for boxscore data (game_id -> data, timestamp)
-        # Helps avoid duplicate API calls within the same polling cycle
-        self._boxscore_cache: dict[str, tuple[dict, float]] = {}
-        self._cache_ttl = 30  # seconds
-
     def _request_with_retry(
         self, url: str, headers: dict, params: dict
     ) -> Optional[dict]:
@@ -175,32 +170,12 @@ class NBAApiClient:
         return all_games
 
     def get_boxscore(self, game_id: str) -> Optional[dict]:
-        """Fetch raw boxscore data for a specific game (with caching)"""
-        import time
-
-        # Check cache first
-        if game_id in self._boxscore_cache:
-            data, timestamp = self._boxscore_cache[game_id]
-            if time.time() - timestamp < self._cache_ttl:
-                logger.debug(f"Using cached boxscore for game {game_id}")
-                return data
-
-        # Cache miss or expired, fetch from API
+        """Fetch raw boxscore data for a specific game"""
         url = f"{self.base_url}/api/stats/boxscore"
         headers = {"X-NBA-Api-Key": self.stats_api_key}
         params = {"gameId": game_id, "measureType": "Traditional"}
 
-        data = self._request_with_retry(url, headers, params)
-
-        # Cache the result if successful
-        if data:
-            self._boxscore_cache[game_id] = (data, time.time())
-
-        return data
-
-    def clear_cache(self) -> None:
-        """Clear the boxscore cache (useful for testing or forcing refresh)"""
-        self._boxscore_cache.clear()
+        return self._request_with_retry(url, headers, params)
 
     def enrich_game_with_boxscore(self, game: Game) -> bool:
         """Enrich a Game object with player data from boxscore API"""

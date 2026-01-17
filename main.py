@@ -32,7 +32,7 @@ from src.state import StateManager
 logger = logging.getLogger(__name__)
 
 # Cooldown for close game alerts (don't spam every poll)
-CLOSE_GAME_ALERT_COOLDOWN_POLLS = 3  # ~6 minutes with 120s polling
+CLOSE_GAME_ALERT_COOLDOWN_POLLS = 4  # ~3 minutes with 45s polling
 
 
 class QuarterUpdateService:
@@ -47,15 +47,19 @@ class QuarterUpdateService:
         self.stop_event = threading.Event()
         self.close_game_cooldowns: dict[str, int] = {}  # game_id -> polls remaining
 
-    def check_games(self) -> None:
-        """Check all games for updates and alerts"""
+    def check_games(self) -> bool:
+        """Check all games for updates and alerts.
+
+        Returns:
+            True if there are active (in-progress) games, False otherwise.
+        """
         logger.info(f"Checking games at {datetime.now().strftime('%I:%M:%S %p')}")
 
         games = self.api.get_todays_games()
 
         if not games:
             logger.info("No games today")
-            return
+            return False
 
         # Separate games by status with improved detection
         # Use GameMonitor.is_final() for robust status detection
@@ -93,6 +97,9 @@ class QuarterUpdateService:
 
         # Check for end of night summary
         self._check_end_of_night(games)
+
+        # Return True if there are active games (for dynamic polling)
+        return len(in_progress) > 0
 
     def _enrich_games_parallel(self, games: list) -> None:
         """Enrich multiple games with boxscore data in parallel"""
@@ -322,7 +329,7 @@ class QuarterUpdateService:
         """Run continuous monitoring until interrupted"""
         logger.info("=" * 60)
         logger.info("NBA Game Monitor Started")
-        logger.info(f"Polling interval: {config.poll_interval_seconds} seconds")
+        logger.info(f"Polling interval: {config.poll_interval_active}s (active) / {config.poll_interval_idle}s (idle)")
         logger.info("Press CTRL+C to stop")
         logger.info("=" * 60)
 
@@ -335,13 +342,16 @@ class QuarterUpdateService:
         signal.signal(signal.SIGINT, signal_handler)
 
         while not self.stop_event.is_set():
+            has_active_games = False
             try:
-                self.check_games()
+                has_active_games = self.check_games()
             except Exception as e:
                 logger.error(f"Error during check: {e}", exc_info=True)
 
-            logger.debug(f"Sleeping for {config.poll_interval_seconds} seconds...")
-            self.stop_event.wait(config.poll_interval_seconds)
+            # Use dynamic polling: faster when games active, slower when idle
+            interval = config.poll_interval_active if has_active_games else config.poll_interval_idle
+            logger.debug(f"Sleeping for {interval} seconds ({'active' if has_active_games else 'idle'} mode)...")
+            self.stop_event.wait(interval)
 
 
 def main():

@@ -216,20 +216,6 @@ def get_quarter_label(quarter: int) -> str:
 
 
 @dataclass(slots=True)
-class QuarterUpdate:
-    """Represents a quarter-end update to be posted"""
-
-    game: Game
-    quarter: int
-    quarter_scores: list[tuple[int, int]] = field(default_factory=list)
-
-    @property
-    def quarter_label(self) -> str:
-        """Get human-readable quarter label"""
-        return get_quarter_label(self.quarter)
-
-
-@dataclass(slots=True)
 class PlayerDailyLeader:
     """A player's daily leader entry"""
 

@@ -17,9 +17,9 @@ class Config:
     stats_api_key: str
     slack_bot_token: Optional[str]
     slack_channel_id: Optional[str]
-    slack_webhook_url: Optional[str]  # Legacy, kept for backwards compatibility
     nba_base_url: str = "https://api.nba.com/v0"
-    poll_interval_seconds: int = 120
+    poll_interval_active: int = 45  # Polling interval when games are in progress
+    poll_interval_idle: int = 300   # Polling interval when no active games (5 min)
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -29,9 +29,9 @@ class Config:
             stats_api_key=os.getenv("STATS_API_KEY", ""),
             slack_bot_token=os.getenv("SLACK_BOT_TOKEN"),
             slack_channel_id=os.getenv("SLACK_CHANNEL_ID_GAME_MONITOR"),
-            slack_webhook_url=os.getenv("SLACK_WEBHOOK_URL"),
             nba_base_url=os.getenv("NBA_BASE_URL", "https://api.nba.com/v0"),
-            poll_interval_seconds=int(os.getenv("POLL_INTERVAL_SECONDS", "120")),
+            poll_interval_active=int(os.getenv("POLL_INTERVAL_ACTIVE", "45")),
+            poll_interval_idle=int(os.getenv("POLL_INTERVAL_IDLE", "300")),
         )
 
     def validate(self) -> list[str]:
